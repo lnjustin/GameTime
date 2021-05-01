@@ -20,6 +20,14 @@ NCAA Men's Football
 **Requirements**
 Requires FREE API key per league obtainable from www.sportsdata.io. FREE API key allows 1000 API calls per month.
 
+**Instructions**
+
+1. Install parent and child drivers
+2. Install Gametime App as well as the Gametime Pro Instance child app and the Gametime College Instance child app
+3. Add Gametime as an app
+4. Within the Gametime app, add one child app instance per team. When you select your team and click “Done” in the child app, a child device is created for that team.
+5. On the Devices page of Hubitat, devices for your teams are listed under the Gametime parent device.
+
 **Non-Live**: This integration is intended to operate based on team schedules, so that you don't miss an opportunity to watch your favorite team and/or so that you can automatically set lighting scenes based on scheduled gametimes. The integration does not pull in live, up-to-date game stats (go watch the game on the TV, not your dashboard!). Although there is a paid API from sportsdata.io for live stats, it's not cost effective for individual use.
 
 **Potential Future Integration**
