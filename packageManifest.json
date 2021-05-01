@@ -1,0 +1,52 @@
+{
+  "packageName": "GameTime",
+  "author": "Justin Leonard",
+  "version": "1.0",
+  "minimumHEVersion": "1.0.0",
+  "dateReleased": "2021-05-01",
+  "apps": [
+    {
+      "id": "d544ee56-99e2-4a62-aed1-f197d5ce4cba",
+      "name": "GameTime",
+      "namespace": "lnjustin",
+      "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20Parent%20App.groovy",
+      "required": true,
+      "oauth": false,
+      "primary": false
+    },
+    {
+      "id": "e58f3534-723a-4fae-85e1-5fbd3fedb7ee",
+      "name": "GameTime College Instance",
+      "namespace": "lnjustin",
+      "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20College%20Instance%20App.groovy",
+      "required": true,
+      "oauth": false,
+      "primary": false
+    },
+    {
+      "id": "2982f141-15a2-4146-8072-fbb55861ddf9",
+      "name": "GameTime Professional Instance",
+      "namespace": "lnjustin",
+      "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20Pro%20Instance%20App.groovy",
+      "required": true,
+      "oauth": false,
+      "primary": false
+    }
+  ],
+  "drivers": [
+    {
+      "id": "eaf71965-a4b1-4ad4-bc69-8b3b5d28db7e",
+      "name": "GameTime",
+      "namespace": "lnjustin",
+      "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20Parent%20Device.groovy",
+      "required": true
+    },
+    {
+      "id": "78e0d482-7c06-486b-ba2a-54fcd8e53ffb",
+      "name": "GameTime Child",
+      "namespace": "lnjustin",
+      "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20Child%20Device.groovy",
+      "required": true
+    }
+  ]
+}
