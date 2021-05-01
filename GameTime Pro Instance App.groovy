@@ -52,6 +52,7 @@ def mainPage() {
             section {
               //  header()                
                 paragraph getInterface("header", " GameTime Professional Instance")
+                paragraph getInterface("note", "After selecting the league and your team, click DONE. This will create a device for the selected team, listed under the GameTime parent device.")
                 input(name:"league", type: "enum", title: "Professional Sports League", options: leagues, required:true, submitOnChange:true)
                 if(!apiKey && league) {
                     input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
@@ -495,3 +496,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
