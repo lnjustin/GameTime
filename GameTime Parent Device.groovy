@@ -95,12 +95,12 @@ def updateParentDevice() {
     for(child in children)
     {
         def childGameTime = child.currentValue("gameTime")
-        if (childGameTime && childGameTime != "No Game Scheduled") {
+        if (childGameTime != null && childGameTime != "No Game Scheduled") {
             if (nextGameChild == null) {
                 nextGameChild = child
             }
             else {
-                def gameTimeObj = new Date(childGameTime)
+                def gameTimeObj = new Date(Long.valueOf(childGameTime))
                 def childStatus = child.currentValue("status ")
                 def nextGameChildStatus = nextGameChild.currentValue("status ")
                 if (childStatus == "InProgress") {
@@ -108,7 +108,7 @@ def updateParentDevice() {
                         nextGameChild = child
                     }
                      else if (nextGameChildStatus == "InProgress") {
-                          def nextGameTimeObj = new Date(nextGameChild.currentValue("gameTime"))
+                          def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))
                          if (nextGameTimeObj.after(gameTimeObj)) {
                              nextGameChild = child    // display whichever game started earlier
                          }
@@ -116,7 +116,7 @@ def updateParentDevice() {
                  }
                  else {
                      if (nextGameChildStatus != "InProgress") {
-                           def nextGameTimeObj = new Date(nextGameChild.currentValue("gameTime"))
+                           def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))
                            def now = new Date()
                            if (getSecondsBetweenDates(now, gameTimeObj) < getSecondsBetweenDates(now, nextGameTimeObj)) {
                                 nextGameChild = child
@@ -130,6 +130,15 @@ def updateParentDevice() {
     else clearParent()
 }
 
+def getSecondsBetweenDates(Date startDate, Date endDate) {
+    try {
+        def difference = endDate.getTime() - startDate.getTime()
+        return Math.round(difference/1000)
+    } catch (ex) {
+        log.error "getSecondsBetweenDates Exception: ${ex}"
+        return 1000
+    }
+}
 
 def clearParent() {
     sendEvent(name: "gameTime", value: "No Game Scheduled")
