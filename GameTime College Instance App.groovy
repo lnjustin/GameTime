@@ -43,8 +43,8 @@ preferences {
 
 }
 
-@Field leagues = ["College Football", "College Basketball"]
-@Field api = ["College Football":"cfb", "College Basketball":"cbb"]
+@Field leagues = ["Men's College Football", "Men's College Basketball"]
+@Field api = ["Men's College Football":"cfb", "Men's College Basketball":"cbb"]
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
@@ -356,7 +356,10 @@ def fetchTeamSchedule() {
 def getCurrentSeason() {
     def season = null
     def seasonDetails = sendApiRequest("/scores/json/CurrentSeason")   
-    if (seasonDetails) season = seasonDetails.ApiSeason
+    if (seasonDetails) {
+        if (league == "Men's College Basketball" || league == "Women's College Basketball") season = seasonDetails.ApiSeason
+        else season = seasonDetails
+    }
     else logDebug("No season found.")
     return season
 }
