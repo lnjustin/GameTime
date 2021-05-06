@@ -278,7 +278,7 @@ def getGameTile(homeTeam, awayTeam, detailStr, channel) {
             gameTile += "<td width='10%' align=center></td>"
             gameTile += "<td width='40%' align=center>${homeTeam.name}</td></tr>" 
         }
-        if (parent.showTeamRecord) {
+        if (parent.showTeamRecord && league != "WNBA") {
             gameTile += "<tr><td width='40%' align=center style='font-size:75%'>${'(' + awayTeam.wins + '-' + awayTeam.losses + ')'}</td>"
             gameTile += "<td width='10%' align=center></td>"
             gameTile += "<td width='40%' align=center style='font-size:75%'>${'(' + homeTeam.wins + '-' + homeTeam.losses + ')'}</td></tr>"  
@@ -356,7 +356,7 @@ def fetchGameData(id) {
 
 def fetchStandings() {
     def standings = null
-    if (state.season) {
+    if (state.season && league != "WNBA") {
          standings = sendApiRequest("/scores/json/Standings/" + state.season)
     }
     return standings    
