@@ -43,8 +43,8 @@ preferences {
 
 }
 
-@Field leagues = ["Men's College Football", "Men's College Basketball"]
-@Field api = ["Men's College Football":"cfb", "Men's College Basketball":"cbb"]
+@Field leagues = ["College Football", "College Basketball"]
+@Field api = ["College Football":"cfb", "College Basketball":"cbb"]
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
