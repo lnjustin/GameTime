@@ -58,7 +58,7 @@ def mainPage() {
                     input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
                 }
                 else if (apiKey && league) {
-                    input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true)
+                    input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true, submitOnChange:true)
                 }
                 
             }
@@ -284,7 +284,7 @@ def getGameTile(homeTeam, awayTeam, detailStr, channel) {
             gameTile += "<td width='40%' align=center style='font-size:75%'>${'(' + homeTeam.wins + '-' + homeTeam.losses + ')'}</td></tr>"  
         }
         gameTile += "<tr style='padding-bottom: 0em'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
-        if (parent.showChannel) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:75%'>${channel}</td></tr>"
+        if (parent.showChannel && channel != "null" && channel != null) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:75%'>${channel}</td></tr>"
         gameTile += "</table></div>"  
     }
     else gameTile = "<div style='overflow:auto;height:90%'></div>"
