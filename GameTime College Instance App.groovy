@@ -39,12 +39,11 @@ definition(
 
 preferences {
     page name: "mainPage", title: "", install: true, uninstall: true
-	page name: "apiAccessPage", title: "Calendarific API Access", install: false, nextPage: "mainPage"
 
 }
 
-@Field leagues = ["College Football", "College Basketball"]
-@Field api = ["College Football":"cfb", "College Basketball":"cbb"]
+@Field leagues = ["College Football", "Men's College Basketball", "Women's College Basketball"]
+@Field api = ["College Football":"cfb", "Men's College Basketball":"cbb", "Women's College Basketball":"wcbb"]
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
@@ -60,7 +59,7 @@ def mainPage() {
                 else if (apiKey && league) {
                     input(name:"conference", type: "enum", title: "Conference", options: getConferenceOptions(), required:true, submitOnChange:true)
                     if (conference) {
-                        input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true)
+                        input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true, submitOnChange:true)
                     }
                 }
                 
@@ -228,7 +227,7 @@ def setNextGame() {
         
         if (status == "InPrgoress") {
             def timeRemainingStr = null
-            if (league == "College Basketball") {
+            if (league == "Men's College Basketball" || league == "Women's College Basketball") {
                 if (periodStr == "1") timeRemainingStr = "1st " + nextGame.TimeRemainingMinutes + ":" + nextGame.TimeRemainingSeconds
                 else if (periodStr == "2") timeRemainingStr = "2nd " + nextGame.TimeRemainingMinutes + ":" + nextGame.TimeRemainingSeconds
             }
@@ -275,7 +274,7 @@ def getGameTile(homeTeam, awayTeam, detailStr, channel) {
             gameTile += "<td width='40%' align=center style='font-size:75%'>${'(' + homeTeam.wins + '-' + homeTeam.losses + ')'}</td></tr>"  
         }
         gameTile += "<tr style='padding-bottom: 0em'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
-        if (parent.showChannel) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:75%'>${channel}</td></tr>"
+        if (parent.showChannel && channel != "null" && channel != null) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:75%'>${channel}</td></tr>"
         gameTile += "</table></div>"  
     }
     else gameTile = "<div style='overflow:auto;height:90%'></div>"
@@ -348,7 +347,21 @@ def fetchTeamSchedule() {
     def schedule = null
     def season = getCurrentSeason()
     if (state.team && season) {
-         schedule = sendApiRequest("/scores/json/TeamSchedule/" + season + "/" + getTeamKey())
+        if (league == "Men's College Basketball" || league == "Women's College Basketball") {
+             schedule = sendApiRequest("/scores/json/TeamSchedule/" + season + "/" + getTeamKey())
+        }
+        else if (league == "College Football") {
+            def leagueSchedule = sendApiRequest("/scores/json/Games/" + season)                                                                                                                                                                                                                                                                            
+            def teamSchedule = []
+            if (leagueSchedule) {
+                for (game in leagueSchedule) {
+                    if (game.AwayTeam == state.team.key || game.HomeTeam == state.team.key) {
+                        teamSchedule.add(game)
+                    }
+                }
+            }
+            schedule = teamSchedule
+        }
     }
     return schedule
 }
