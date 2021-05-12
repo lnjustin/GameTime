@@ -10,12 +10,12 @@
 ![image](https://user-images.githubusercontent.com/12822477/116754944-9b177280-a9d7-11eb-8e1a-ffe7eb49242c.png)
 
 **Supported Leagues**
-NFL
-NBA and WNBA
-MLB
-NHL
-NCAA Men's Basketball
-NCAA Men's Football
+NFL<br>
+NBA<br>
+MLB<br>
+NHL<br>
+NCAA Men's Basketball<br>
+NCAA Men's Football<br>
 
 **Requirements**
 Requires FREE API key per league obtainable from www.sportsdata.io. FREE API key allows 1000 API calls per month.
