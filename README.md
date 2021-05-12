@@ -9,7 +9,7 @@
 
 ![image](https://user-images.githubusercontent.com/12822477/116754944-9b177280-a9d7-11eb-8e1a-ffe7eb49242c.png)
 
-**Supported Leagues**
+**Supported Leagues**<br>
 NFL<br>
 NBA<br>
 MLB<br>
