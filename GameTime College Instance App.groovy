@@ -220,7 +220,8 @@ def setNextGame() {
             opponent = homeTeam
         }
         else log.error "Team Not Playing in Next Game"
-        def opponentName = opponent.school + opponent.name
+        def opponentName = ""
+        if (opponent) opponentName = opponent.school + " " + opponent.name
         
         def periodStr = nextGame.Period        
         def tile = null
@@ -249,7 +250,7 @@ def setNextGame() {
             delayedGameTimeObj = gameTimeObj + 11.minutes
         }
         if (status == "InProgress") runIn(300, setNextGame) // while game is in progress, update every 5 minutes
-        else if (delayedGameTimeObj.after(new Date())) schedule(delayedGameTimeObj, setNextGame)
+        else if (delayedGameTimeObj.after(new Date())) runOnce(delayedGameTimeObj, setNextGame)
     }
 }
 
@@ -264,9 +265,9 @@ def getGameTile(homeTeam, awayTeam, detailStr, channel) {
         gameTile += "<td width='10%' align=center>at</td>"
         gameTile += "<td width='40%' align=center><img src='${homeTeam.logo}' width='100%'></td></tr>"
         if (parent.showTeamName) {
-            gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord ? awayTeam.rank : ''} ${awayTeam.name}</td>"
+            gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord && awayTeam.rank != null ? awayTeam.rank : ''} ${awayTeam.name}</td>"
             gameTile += "<td width='10%' align=center></td>"
-            gameTile += "<td width='40%' align=center>${parent.showTeamRecord ? homeTeam.rank : ''} ${homeTeam.name}</td></tr>" 
+            gameTile += "<td width='40%' align=center>${parent.showTeamRecord && homeTeam.rank != null ? homeTeam.rank : ''} ${homeTeam.name}</td></tr>" 
         }
         if (parent.showTeamRecord) {
             gameTile += "<tr><td width='40%' align=center style='font-size:75%'>${'(' + awayTeam.wins + '-' + awayTeam.losses + ')'}</td>"
@@ -286,7 +287,6 @@ def getTeam(key) {
     def hierarchy = getHierarchy()
     for (conf in hierarchy) {
         for (tm in conf.teams) {                
-            def name = tm.school + " " + tm.name
             if(tm.key == key) {
                 team = tm
             }
