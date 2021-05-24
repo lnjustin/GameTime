@@ -22,10 +22,11 @@ metadata
         capability "Actuator"
         capability "Switch"
         
+        attribute "tile", "string" 
+        
         attribute "gameTime", "string"
         attribute "gameTimeStr", "string"
-        attribute "status", "string"        
-        attribute "tile", "string"     
+        attribute "status", "string"     
         attribute "opponent", "string"  
     }
 }
@@ -47,6 +48,14 @@ def logDebug(msg)
     }
 }    
 
+def on() {
+    sendEvent(name: "switch", value: "on")
+}
+
+def off() {
+    sendEvent(name: "switch", value: "off")
+}
+
 def updated()
 {
     configure()
@@ -63,13 +72,14 @@ def configure()
 }
 
 def updateDevice(data) {
-    state.appID = data.appID
-    sendEvent(name: "gameTime", value: data.gameTime)
-    sendEvent(name: "gameTimeStr", value: data.gameTimeStr)
+    
+    sendEvent(name: "gameTime", value: data.game != null ? data.game.gameTime : "No Game Data")
+    sendEvent(name: "gameTimeStr", value: data.game != null ? data.game.gameTimeStr : "No Game Data")
+    sendEvent(name: "status", value: data.game != null ? data.game.status : "No Game Data")
+    sendEvent(name: "opponent", value: data.game != null ? data.game.opponent.displayName : "No Game Data")
+    
     sendEvent(name: "tile", value: data.tile)
-    sendEvent(name: "status", value: data.status)
-    sendEvent(name: "opponent", value: data.opponent)
-    sendEvent(name: "switch", value: data.switch)
+    sendEvent(name: "switch", value: data.switchValue)
 }
 
 def getDeviceData() {
