@@ -51,6 +51,9 @@ def mainPage() {
                     section(getInterface("header", " Professional Sports")) {
 				        app(name: "anyOpenApp", appName: "GameTime Professional Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for professional sports</b>", multiple: true)
 			        } 
+                    section("") { 
+                        paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
+                    }
                 }
             }
             section (getInterface("header", " Tile Settings")) {
