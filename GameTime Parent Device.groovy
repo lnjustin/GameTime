@@ -12,7 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- * V1.0 - Initial Release
+ *  v1.0.0 - Full Feature Beta
 **/
 
 metadata
@@ -92,10 +92,14 @@ def updateChildDevice(appID, data)
 {
     def child = getChildDevice("GameTimeChildDevice${appID}")
     if (child) {
-        child.updateDevice(data)
+        child.updateDevice(appID, data)
         updateParentDevice()
     }
     else log.error "No Child Device for app ${appID} found"
+}
+
+def updateChildStatus(appID) {
+    parent.updateAppStatus(appID)
 }
 
 def updateParentDevice() {
