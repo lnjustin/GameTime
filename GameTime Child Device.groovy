@@ -12,7 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- * V1.0 - Initial Release
+ *  v1.0.0 - Full Feature Beta
 **/
 
 metadata
@@ -27,7 +27,9 @@ metadata
         attribute "gameTime", "string"
         attribute "gameTimeStr", "string"
         attribute "status", "string"     
-        attribute "opponent", "string"  
+        attribute "opponent", "string" 
+        
+        command "updateStatus"
     }
 }
 
@@ -71,8 +73,8 @@ def configure()
     refresh()
 }
 
-def updateDevice(data) {
-    
+def updateDevice(appID, data) {
+    state.appID = appID
     sendEvent(name: "gameTime", value: data.game != null ? data.game.gameTime : "No Game Data")
     sendEvent(name: "gameTimeStr", value: data.game != null ? data.game.gameTimeStr : "No Game Data")
     sendEvent(name: "status", value: data.game != null ? data.game.status : "No Game Data")
@@ -84,6 +86,11 @@ def updateDevice(data) {
 
 def getDeviceData() {
     def data = [gameTime: gameTime]    
+}
+
+def updateStatus() {
+    // parent.updateChildStatus(state.appID)
+    parent.updateChildStatus(1113)
 }
 
 def refresh()
