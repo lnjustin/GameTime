@@ -13,7 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Change History:
- *  v1.0.0 - Full Feature Beta
+ *  v1.2.0 - Full Feature Beta
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
