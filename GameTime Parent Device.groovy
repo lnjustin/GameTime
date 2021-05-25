@@ -12,7 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  v1.0.0 - Full Feature Beta
+ *  v1.2.0 - Full Feature Beta
 **/
 
 metadata
