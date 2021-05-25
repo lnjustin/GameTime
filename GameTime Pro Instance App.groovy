@@ -13,9 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Change History:
- *
- *    Date        Who            What
- *    ----        ---            ----
+ *  v1.0.0 - Full Feature Beta
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -231,15 +229,21 @@ def updateState() {
 
 }
 
-def updateRecord() {
-    if (state.updateAttempts != null && state.updateAttempts > 12) {
+def updateRecord(onDemand = false) {
+    def update = false
+    if (onDemand == true) update = true
+    else if (state.updateAttempts != null && state.updateAttempts > 12) {
         // abort update attempt
         state.updateAttempts = 0
     }
     else {
+        update = true
         if (state.updateAttempts == null) state.updateAttempts = 1
         else state.updateAttempts++
-        def lastGameResult = getLastGameResult()
+    }
+    if (update == true) {
+        setStandings()
+        def lastGameResult = getLastGameResult(onDemand)
         state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
         updateDisplayedGame()
     }
@@ -249,7 +253,7 @@ def getRecord(team) {
     return [wins: team.wins, losses: team.losses, overtimeLosses: team.overtimeLosses, ties: team.ties]
 }
 
-def getLastGameResult() {
+def getLastGameResult(onDemand = false) {
     def result = null
     def retryNeeded = false
     def currentRecord = getRecord(state.team)
@@ -278,10 +282,13 @@ def getLastGameResult() {
     if (result == null) {
         def warning = "Warning: Unable to Determine Result of Last Game for ${state.team.displayName}."
         if (retryNeeded == true) {
-            warning += " Record has not been updated yet. Will keep checking every 10 minutes for the 2 hours for the record to be updated."
-            runIn(600, updateRecord)
+            warning += " Record has not been updated yet."
+            if (onDemand == false) {
+                runIn(600, updateRecord)
+                warning += " Will keep checking."
+            }
         }
-        warning += " Last Record is wins: ${state.lastRecord.wins} losses: ${state.lastRecord.losses}${league == "NFL" ? " ties: " + state.lastRecord.ties : ""}${league == "NFL" ? " OT losses: " + state.lastRecord.overtimeLosses : ""}. Current Record is wins: ${currentRecord.wins} losses: ${currentRecord.losses}${league == "NFL" ? " ties: " + currentRecord.ties : ""}${league == "NFL" ? " OT losses: " + currentRecord.overtimeLosses : ""}."
+        warning += " Last Record is wins: ${state.lastRecord.wins} losses: ${state.lastRecord.losses}${league == "NFL" ? " ties: " + state.lastRecord.ties : ""}${league == "NHL" ? " OT losses: " + state.lastRecord.overtimeLosses : ""}. Current Record is wins: ${currentRecord.wins} losses: ${currentRecord.losses}${league == "NFL" ? " ties: " + currentRecord.ties : ""}${league == "NHL" ? " OT losses: " + currentRecord.overtimeLosses : ""}."
         log.warn warning
     }            
     return result
@@ -530,7 +537,7 @@ def getGameTile(game) {
     if (textColor != "#000000") colorStyle = "color:" + textColor
     if (game != null) {
         def detailStr = null
-        def gameFinished = (game.status == "Final" || game.status == "F/OT" || game.status == "F/SO" || game.status == "Won" || game.status == "Lost" || game.status == "Tied") ? true : false
+        def gameFinished = (game.status == "Final" || game.status == "F/OT" || game.status == "F/SO" || game.status == "Won" || game.status == "Lost" || game.status == "Lost in OT" || game.status == "Tied") ? true : false
         if (game.status == "InProgress") detailStr = game.progress
         else if (gameFinished) detailStr = game.status
         else detailStr = game.gameTimeStr   
