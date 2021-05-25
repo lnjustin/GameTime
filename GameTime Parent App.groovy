@@ -13,9 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Change History:
- *
- *    Date        Who            What
- *    ----        ---            ----
+ *  v1.0.0 - Full Feature Beta
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -101,6 +99,16 @@ def initialize() {
     createParentDevice()
     childApps.each { child ->
         child.updated()                
+    }
+}
+
+def updateAppStatus(appID) {
+    childApps.each { child ->
+        logDebug("Searching for child with id ${appID}. Iterating over child with id ${child.id}")
+        if (child.id == appID) {
+            logDebug("Found child app ${appID}. Calling update record.")
+            child.updateRecord(true)                
+        }
     }
 }
 
