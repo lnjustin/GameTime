@@ -13,6 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  v1.2.0 - Full Feature Beta
+ *  v1.2.1 - Fixed issue with parent device tile update
 **/
 
 metadata
@@ -112,14 +113,14 @@ def updateParentDevice() {
         def childGameTime = child.currentValue("gameTime")
         if (childGameTime != "No Game Scheduled" && childGameTime != "No Game Data") {
             def gameTimeObj = new Date(Long.valueOf(childGameTime))
-            def childStatus = child.currentValue("status ")
+            def childStatus = child.currentValue("status")
             if (gameTimeObj.after(now) || gameTimeObj.equals(now)  || childStatus == "Scheduled" || childStatus == "InProgress"  || childStatus == "Delayed") {         
                 if (nextGameChild == null) {
                     nextGameChild = child
                 }
                 else {                
                     def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))                
-                    def nextGameChildStatus = nextGameChild.currentValue("status ")
+                    def nextGameChildStatus = nextGameChild.currentValue("status")
                     if (childStatus == "InProgress") {
                         if (nextGameChildStatus != "InProgress") nextGameChild = child
                          else if (nextGameChildStatus == "InProgress" && nextGameTimeObj.after(gameTimeObj)) nextGameChild = child    // display whichever game started earlier
@@ -218,8 +219,8 @@ def deleteChildren()
     }
 }
 
-
 def refresh()
 {
 
 }
+
