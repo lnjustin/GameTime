@@ -210,6 +210,7 @@ Date getGameTime(game) {
 }
 
 String getGameTimeStr(Date gameTime) {
+    def now = new Date()
     def nextWeek = new Date().clearTime() + 7
     def lastWeek = new Date().clearTime() - 7
     def dateFormat = null
