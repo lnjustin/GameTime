@@ -14,7 +14,8 @@
  *
  *  Change History:
  *  v1.2.0 - Full Feature Beta
- *  v1.2.1 - Update scheduling if late night game; Time Formatting improvements
+ *  v1.2.1 - Bug fixes
+ *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
