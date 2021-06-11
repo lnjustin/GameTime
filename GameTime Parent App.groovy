@@ -108,7 +108,7 @@ def updated() {
 }
 
 def uninstalled() {
-    deleteParentDevice()
+    deleteDevices()
 	logDebug "Uninstalled app"
 }
 
@@ -159,9 +159,19 @@ def createParentDevice()
     }
 }
 
-def deleteParentDevice()
+def deleteDevices() 
 {
+    deleteChildredDevices()
     deleteChildDevice("GameTimeParentDevice${app.id}")
+}
+
+def deleteChildredDevices() 
+{
+    def parent = getChildDevice("GameTimeParentDevice${app.id}")
+    if (parent) {
+        parent.deleteChildren()
+    }
+    else log.error "No Parent Device Found. No child devices deleted."    
 }
 
 def deleteChildDevice(appID) {
