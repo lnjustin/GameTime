@@ -13,9 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Change History:
- *
- *    Date        Who            What
- *    ----        ---            ----
+ *  v1.2.0 - Full Feature Beta
+ *  v1.2.1 - Bug fixes
+ *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -51,13 +51,19 @@ def mainPage() {
                     section(getInterface("header", " Professional Sports")) {
 				        app(name: "anyOpenApp", appName: "GameTime Professional Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for professional sports</b>", multiple: true)
 			        } 
+                    section("") { 
+                        paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
+                    }
                 }
             }
             section (getInterface("header", " Tile Settings")) {
                 input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                 input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                 input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
+                input(name:"fontSize", type: "number", title: "Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
                 input("textColor", "text", title: "Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
+                input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
+                input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
             }
 			section (getInterface("header", " General Settings")) {
                 input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
@@ -71,6 +77,18 @@ def mainPage() {
 
 def getTextColor() {
     return (textColor) ? textColor : "#000000"
+}
+
+def getFontSize() {
+    return fontSize != null ? fontSize : 100
+}
+
+def getInactivityThreshold() {
+    return hoursInactive != null ? hoursInactive : 24
+}
+
+def getClearWhenInactive() {    
+    return clearWhenInactive != null ? clearWhenInactive : false
 }
 
 def footer() {
@@ -98,6 +116,22 @@ def initialize() {
     createParentDevice()
     childApps.each { child ->
         child.updated()                
+    }
+}
+
+def updateLastGameResult(appID) {
+    childApps.each { child ->
+        if (child.id == appID) {
+            child.updateRecord(true)                
+        }
+    }
+}
+
+def fullUpdate(appID) {
+    childApps.each { child ->
+        if (child.id == appID) {
+            child.update()                
+        }
     }
 }
 
@@ -159,7 +193,40 @@ def logDebug(msg) {
 		log.debug msg
 	}
 }
+
+def countAPICall(league) {
+    if (state.apiCallsThisMonth == null) state.apiCallsThisMonth = [:]
+    if (state.apiCallsThisMonth[league] != null)  state.apiCallsThisMonth[league]++
+    else if (state.apiCallsThisMonth[league] == null) state.apiCallsThisMonth[league] = 1
+    if (state.apiCallsThisMonth[league] > 1000) log.warn "API Call Limit of 1000 per month exceeded for ${league}. Uncheck 'Clear Teams Data Between Updates' in the app to reduce the number of API calls."
+}
     
+def updateAPICallInfo(league) {
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(location.timeZone)
+    cal.setTime(new Date())
+    def dayOfMonth = cal.get(Calendar.DAY_OF_MONTH)
+    def isMonthStart = dayOfMonth == 1 ? true : false    
+    if (isMonthStart) {
+        if (state.numMonthsInstalled == null) state.numMonthsInstalled = [:]
+        if (state.numMonthsInstalled[league] == null) {
+            state.numMonthsInstalled[league] = 0 // don't start average yet since only installed part of the month
+            if (state.apiCallsThisMonth == null) state.apiCallsThisMonth = [:]
+            state.apiCallsThisMonth[league] = 0
+        }
+        else {
+            state.numMonthsInstalled[league]++
+            if (state.avgAPICallsPerMonth == null) state.avgAPICallsPerMonth = [:]
+            if (state.avgAPICallsPerMonth[league] != null) {
+                state.avgAPICallsPerMonth[league] = state.avgAPICallsPerMonth[league] + ((state.apiCallsThisMonth[league] - state.avgAPICallsPerMonth[league]) / state.numMonthsInstalled[league])
+            }
+            else {
+                state.avgAPICallsPerMonth[league] = state.apiCallsThisMonth[league]
+            }           
+            state.apiCallsThisMonth[league] = 0
+        }
+    }
+}
 
 def getInterface(type, txt="", link="") {
     switch(type) {
@@ -198,4 +265,5 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
 
