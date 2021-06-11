@@ -13,9 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Change History:
- *
- *    Date        Who            What
- *    ----        ---            ----
+ *  v1.2.0 - Full Feature Beta
+ *  v1.2.1 - Bug fixes
+ *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -79,8 +79,20 @@ def mainPage() {
     }
 }
 
+def getFontSize() {
+    return parent.getFontSize()
+}
+
 def getClearStateSetting() {
     return clearStateBetweenUpdate != null ? clearStateBetweenUpdate : true
+}
+
+def getInactivityThreshold() {
+    return parent.getInactivityThreshold()
+}
+
+def getClearWhenInactive() {    
+    return parent.getClearWhenInactive()
 }
 
 def getTeamKey() {
@@ -98,7 +110,9 @@ def installed() {
 def updated() {
     unschedule()
 	unsubscribe()
+    def storedRecord = state.lastRecord
     state.clear()
+    if (storedRecord != null) state.lastRecord = storedRecord
 	initialize()
 }
 
@@ -112,7 +126,7 @@ def initialize() {
         setTeams()
         setMyTeam()
         createChild()
-        update()
+        update(true)
         schedule("01 00 00 ? * *", update)
     }
     else log.error "Missing input fields."
@@ -167,10 +181,20 @@ def isToday(Date date) {
     return isToday
 }
 
-def update() {
+def isYesterday(Date date) {
+    def isYesterday = false
+    def today = new Date().clearTime()
+    def yesterday = today - 1
+    def dateCopy = new Date(date.getTime())
+    def dateObj = dateCopy.clearTime()    
+    if (dateObj.equals(yesterday)) isYesterday = true
+    return isYesterday
+}
+
+def update(onInitialize = false) {
     logDebug("Updating GameTime for ${state.team.displayName}")
     if (!state.teams) setTeams()
-    updateState()
+    updateState(onInitialize)
     updateDisplayedGame()
     scheduleUpdate()
     if (getClearStateSetting()) state.remove("teams") // clear teams state between updates since state is large
@@ -186,7 +210,9 @@ Date getGameTime(game) {
 }
 
 String getGameTimeStr(Date gameTime) {
-    def nextWeek = new Date() + 7
+    def now = new Date()
+    def nextWeek = new Date().clearTime() + 7
+    def lastWeek = new Date().clearTime() - 7
     def dateFormat = null
     def gameTimeStrPrefix = ""
     if (gameTime.after(nextWeek)) dateFormat = new SimpleDateFormat("EEE, MMM d h:mm a")
@@ -194,17 +220,25 @@ String getGameTimeStr(Date gameTime) {
         gameTimeStrPrefix = "Today "
         dateFormat = new SimpleDateFormat("h:mm a")
     }
+    else if (isYesterday(gameTime)) {
+        gameTimeStrPrefix = "Yesterday "
+        dateFormat = new SimpleDateFormat("h:mm a")
+    }
+    else if (gameTime.before(lastWeek)) dateFormat = new SimpleDateFormat("EEE, MMM d h:mm a")
+    else if (gameTime.before(now)) {
+        gameTimeStrPrefix = "This Past "
+        dateFormat = new SimpleDateFormat("EEE h:mm a")
+    }
     else dateFormat = new SimpleDateFormat("EEE h:mm a")
     dateFormat.setTimeZone(location.timeZone)        
     def gameTimeStr = gameTimeStrPrefix + dateFormat.format(gameTime)    
     return gameTimeStr
 }
 
-def updateState() {    
-    logDebug("Updating state.")    
+def updateState(onInitialize = false) {     
     updateAPICallInfo()
     def storedNextGame = state.nextGame
-    state.lastRecord = getRecord(state.team)
+    def storedRecord = getRecord(state.team)
     
     def schedule = fetchTeamSchedule()
     def now = new Date()
@@ -242,93 +276,106 @@ def updateState() {
     }
 
     state.nextGame = getGameData(nextGame)
-    logDebug("Updated next game to ${state.nextGame}")
     state.lastGame = getGameData(lastGame)
-    logDebug("Updated last game to ${state.lastGame}")
     setStandings()
     
-    if (storedNextGame && state.lastGame.id == storedNextGame.id) {
-        // the game stored in state as the next game has completed, and is now the last game. Deduce the result of the game.
-        logDebug("The game stored in state as the next game has completed, and is now the last game.")
-        if (state.lastGame.status == "Final" || state.lastGame.status == "F/OT") {
-            // game was played to completion, as opposed to being delayed or canceled. Deduce the winner.
-            def lastGameResult = getLastGameResult()
-            state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
-         //   logDebug("The game stored in state as the next game is final. Result was ${state.lastGame.status}")
+    if (hasRecordChanged(storedRecord)) {
+        logDebug("Record has changed. Setting last record to ${storedRecord} for determining the result of the last game.")
+        state.lastRecord = [wins: storedRecord.wins, losses: storedRecord.losses, asOf: (new Date()).getTime()]  
+    }
+    else {
+        logDebug("Team Record has not changed, eiher because just initialized or because API has not reported a change. No update to state.lastRecord made.")
+        if (storedNextGame && state.lastGame?.id == storedNextGame.id) {
+            if (state.lastGame.status == "Final" || state.lastGame.status == "F/OT") {
+                logDebug("API reported game as over before record was updated.")
+            }
+            else {
+                logDebug("Reason for record not being updated may be that the game was canceled or postponed.")
+            }
         }
     }
+    def lastGameResult = getLastGameResult(onInitialize)
+    if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
 
     Date dateToUpdateDisplay = getDateToSwitchFromLastToNextGame()
     if (dateToUpdateDisplay != null && dateToUpdateDisplay.after(now)) runOnce(dateToUpdateDisplay, updateDisplayedGame)
+}
+
+def hasRecordChanged(storedRecord) {
+    def currentRecord = getRecord(state.team)
+    def hasChanged = false
+    if (currentRecord.wins != storedRecord.wins || currentRecord.losses != storedRecord.losses) hasChanged = true 
+    return hasChanged
 }
 
 def getRecord(team) {
     return [wins: team.wins as Integer, losses: team.losses as Integer]
 }
 
-def updateRecord() {
-    if (state.updateAttempts != null && state.updateAttempts > 12) {
+def updateRecord(onDemand = false) {
+    def update = false
+    if (onDemand == true) update = true
+    else if (state.updateAttempts != null && state.updateAttempts > 12) {
         // abort update attempt
         state.updateAttempts = 0
     }
     else {
+        update = true
         if (state.updateAttempts == null) state.updateAttempts = 1
         else state.updateAttempts++
-        def lastGameResult = getLastGameResult()
+    }
+    if (update == true) {
+        def storedRecord = getRecord(state.team)
+        setStandings()
+        if (hasRecordChanged(storedRecord)) state.lastRecord = [wins: storedRecord.wins, losses: storedRecord.losses, asOf: (new Date()).getTime()] 
+        else logDebug("Team Record has not changed. No update to state.lastRecord made.")
+        def lastGameResult = getLastGameResult(onDemand)
         state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
         updateDisplayedGame()
     }
 }
 
-def getLastGameResult(storedMyTeam) {
+def getLastGameResult(suppressRetry = false) {
     def result = null
+    def recordNotUpdated = false
     def currentRecord = getRecord(state.team)
     if (state.lastRecord == null) {
         log.warn "Unable to determine result of last game for ${state.team.name}. Last team record not stored."
+        if (suppressRetry == false) {
+            runIn(600, updateRecord)
+            log.warn " Will keep checking."
+        }
         return null
     }
-    if (currentRecord.wins == state.lastRecord.wins && currentRecord.losses == state.lastRecord.losses + 1) {
-         // our team lost the last game
-         result = "Lost"
-     }
-     else if (currentRecord.wins == state.lastRecord.wins + 1 && currentRecord.losses == state.lastRecord.losses) {
-         // our team won the last game
-         result = "Won"
-     }
-    else {
-        def warning = "Warning: Unable to Determine Result of Last Game for ${state.team.name}."
-        if (currentRecord.wins == state.lastRecord.wins && currentRecord.losses == state.lastRecord.losses) {
-            warning += " Record has not been updated yet. Will keep checking every 10 minutes for the 2 hours for the record to be updated."
+    else if (state.lastGame != null && state.lastRecord.asOf <= state.lastGame.gameTime) {
+        logDebug("Record not yet updated for last game.")
+        if (suppressRetry == false) {
             runIn(600, updateRecord)
+            logDebug(" Will keep checking.")
+        }
+        return null        
+    }
+    if (currentRecord.wins == state.lastRecord.wins && currentRecord.losses == state.lastRecord.losses + 1) result = "Lost"
+    else if (currentRecord.wins == state.lastRecord.wins + 1 && currentRecord.losses == state.lastRecord.losses) result = "Won"
+    else if (currentRecord.wins == state.lastRecord.wins && currentRecord.losses == state.lastRecord.losses) recordNotUpdated = true
+    if (result == null) {
+        def warning = "Warning: Unable to Determine Result of Last Game for ${state.team.name}."
+        if (recordNotUpdated == true) {
+            warning += " Record has not been updated yet."
+            if (suppressRetry == false) {
+                runIn(600, updateRecord)
+                warning += " Will keep checking."
+            }
         }
         warning += " Last Record is wins: ${state.lastRecord.wins} losses: ${state.lastRecord.losses}. Current Record is wins: ${currentRecord.wins} losses: ${currentRecord.losses}."
-        log.warn warning        
-    }
+        log.warn warning
+    }            
+    else logDebug("Determined last game result: ${result}")
     return result
 }
 
 def updateAPICallInfo() {
-    Calendar cal = Calendar.getInstance()
-    cal.setTimeZone(location.timeZone)
-    cal.setTime(new Date())
-    def dayOfMonth = cal.get(Calendar.DAY_OF_MONTH)
-    def isMonthStart = dayOfMonth == 1 ? true : false    
-    if (isMonthStart) {
-        if (state.numMonthsInstalled == null) {
-            state.numMonthsInstalled = 0 // don't start average yet since only installed part of the month
-            state.apiCallsThisMonth = 0
-        }
-        else {
-            state.numMonthsInstalled++
-            if (state.avgAPICallsPerMonth != null) {
-                state.avgAPICallsPerMonth = state.avgAPICallsPerMonth + ((state.apiCallsThisMonth - state.avgAPICallsPerMonth) / state.numMonthsInstalled)
-            }
-            else {
-                state.avgAPICallsPerMonth = state.apiCallsThisMonth
-            }           
-            state.apiCallsThisMonth = 0
-        }
-    }
+    parent.updateAPICallInfo(league)
 }
 
 def getGameData(game) {
@@ -358,45 +405,55 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         def nextGameTime = new Date(state.nextGame.gameTime)
         def now = new Date()
         
-        if (isToday(nextGameTime)) {
+        if (state.nextGame.status == "Scheduled" && (nextGameTime.after(now) || nextGameTime.equals(now)) && isToday(nextGameTime)) {
+            // if game starts later today, update shortly after gametime
             // only need to schedule update if game is today. If game is tomorrow, update will happen at midnight anyway
-            if (nextGameTime.after(now) || nextGameTime.equals(now)) {
-                // if game starts later today, update shortly after gametime
-                def delayedGameTime = null
-                // update game after the 10 minute delay from SportsData.IO
-                use(TimeCategory ) {
-                    delayedGameTime = nextGameTime + 11.minutes
-                }
-                runOnce(delayedGameTime, updateGameInProgress)
+            def delayedGameTime = null
+            // update game after the 10 minute delay from SportsData.IO
+            use(TimeCategory ) {
+                delayedGameTime = nextGameTime + 11.minutes
+            }
+            runOnce(delayedGameTime, updateGameInProgress)
         
-            }
-            else if (state.nextGame.status == "InProgress") {
-                runIn(600, updateGameInProgress) // while game is in progress, update every 10 minutes
-            }
-            else if (state.nextGame.status == "Delayed") {
-                runIn(1800, updateGameInProgress) // while game is delayed, update every 30 minutes
-            }
-            else if (state.nextGame.status == "Scheduled") {
-                // game should have already started by now, but sportsdata.io has not updated its API to reflect it yet (10 minute delay for free API). Update in 10 minutes
-                log.warn "Game should have started by now, but status still indicates the game is scheduled, not in progress."
-                runIn(600, updateGameInProgress) // update every 10 minutes
-            }  
-            else if (updatingGameInProgress) {
-                // game is over or cancelled. Update game state
-                update()
-            }
+        }
+        else if (state.nextGame.status == "InProgress") {
+            // update in progress game no matter whether game started today or not, since late night game will progress into the next day
+            runIn(600, updateGameInProgress) // while game is in progress, update every 10 minutes
+        }
+        else if (state.nextGame.status == "Delayed") {
+            // update dalyed game no matter whether game started today or not, since late night game will delay into the next day
+            runIn(1800, updateGameInProgress) // while game is delayed, update every 30 minutes
+        }
+        else if (state.nextGame.status == "Scheduled" && now.after(nextGameTime)) {
+            // game should have already started by now, but sportsdata.io has not updated its API to reflect it yet (10 minute delay for free API). Update in 10 minutes
+            log.warn "Game should have started by now, but status still indicates the game is scheduled, not in progress."
+            runIn(600, updateGameInProgress) // update every 10 minutes
+        }  
+        else if (updatingGameInProgress) {
+            // game is over or cancelled. Update game state
+            update()
         }
     }
 }
 
+def doubleDigit(num) {
+    def ret = null
+    if (num != null) {
+        def integer = num as Integer
+        ret = String.format("%02d", integer)
+    }
+    return ret
+}
+
 def getProgress(game) {
     def progressStr = ""
+    def timeRemaining = game.TimeRemainingMinutes + ":" + doubleDigit(game.TimeRemainingSeconds)
     if (league == "Men's College Basketball" || league == "Women's College Basketball") {
-         if (game.Period == "1") progressStr = "1st " + game.TimeRemainingMinutes + ":" + game.TimeRemainingSeconds
-         else if (game.Period == "2") progressStr = "2nd " + game.TimeRemainingMinutes + ":" + game.TimeRemainingSeconds
+         if (game.Period == "1") progressStr = "1st " + timeRemaining
+         else if (game.Period == "2") progressStr = "2nd " + timeRemaining
     }
     else if (league == "College Football") {
-         if (game.Period == "1" || game.Period == "2" || game.Period == "3" || game.Period == "4") progressStr = game.Period + "Q " + game.TimeRemainingMinutes + ":" + game.TimeRemainingSeconds
+         if (game.Period == "1" || game.Period == "2" || game.Period == "3" || game.Period == "4") progressStr = game.Period + "Q " + timeRemaining
     }
     return progressStr
 }
@@ -465,11 +522,13 @@ def getGameToDisplay() {
     if (state.lastGame == null && state.nextGame != null) game = state.nextGame
     else if (state.nextGame == null && state.lastGame != null) game = state.lastGame
     else if (state.lastGame != null && state.nextGame != null) {
-        def now = new Date()        
-        Date updateAtDate = getDateToSwitchFromLastToNextGame()
-        if (now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
-        else game = state.lastGame
-        
+        if (state.nextGame.status == "InProgress" || state.nextGame.status == "Delayed") game = state.nextGame
+        else {
+            def now = new Date()        
+            Date updateAtDate = getDateToSwitchFromLastToNextGame()
+            if (now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
+            else game = state.lastGame
+        }    
     }
     return game
 }
@@ -489,9 +548,11 @@ def getUpdatedGameData(gameToUpdate) {
 def updateGameInProgress() {
     if (state.nextGame) {
         def updatedGameData = getUpdatedGameData(state.nextGame)   
-        logDebug("Updating game in progress. Progress is ${updatedGameData.progress}. Status is ${updatedGameData.status}")
-        state.nextGame.progress = updatedGameData.progress
-        state.nextGame.status = updatedGameData.status
+        if (updatedGameData != null) {
+            logDebug("Updating game in progress. Progress is ${updatedGameData.progress}. Status is ${updatedGameData.status}")
+            state.nextGame.progress = updatedGameData.progress
+            state.nextGame.status = updatedGameData.status
+        }
         updateDevice([game: state.nextGame, switchValue: getSwitchValue(), tile: getGameTile(state.nextGame)])
         scheduleUpdate(true)
     }
@@ -499,44 +560,83 @@ def updateGameInProgress() {
 
 def getSwitchValue() {
     def switchValue = "off"
-    if (state.lastGame && isToday(new Date(state.lastGame.gameTime))) switchValue = "on"
-    if (state.nextGame && isToday(new Date(state.nextGame.gameTime))) switchValue = "on"
+    if (state.lastGame != null && isToday(new Date(state.lastGame.gameTime)) && state.lastGame.status != "Canceled" && state.lastGame.status != "Postponed") switchValue = "on"
+    if (state.nextGame != null && isToday(new Date(state.nextGame.gameTime)) && state.nextGame.status != "Canceled" && state.nextGame.status != "Postponed") switchValue = "on"
     return switchValue
 }
 
 // TO DO: show next game on tile whenever showing last game?
 def getGameTile(game) {
-    def gameTile = null
-    def textColor = parent.getTextColor()
-    def colorStyle = ""
-    if (textColor != "#000000") colorStyle = "color:" + textColor
-    if (game != null) {
-        def detailStr = null
-        def gameFinished = (game.status == "Final" || game.status == "F/OT" || game.status == "Won" || game.status == "Lost") ? true : false
-        if (game.status == "InProgress") detailStr = game.progress
-        else if (gameFinished) detailStr = game.status
-        else detailStr = game.gameTimeStr   
-        gameTile = "<div style='overflow:auto;height:90%;${colorStyle}'><table width='100%'>"
-        gameTile += "<tr><td width='40%' align=center><img src='${game.awayTeam.logo}' width='100%'></td>"
-        gameTile += "<td width='10%' align=center>at</td>"
-        gameTile += "<td width='40%' align=center><img src='${game.homeTeam.logo}' width='100%'></td></tr>"
-        if (parent.showTeamName) {
-            gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord && awayTeam.rank != null ? awayTeam.rank : ''} ${awayTeam.name}</td>"
-            gameTile += "<td width='10%' align=center></td>"
-            gameTile += "<td width='40%' align=center>${parent.showTeamRecord && homeTeam.rank != null ? homeTeam.rank : ''} ${homeTeam.name}</td></tr>" 
+    def gameTile = "<div style='overflow:auto;height:90%'></div>"
+    def isClearWhenInactiveConfig = getClearWhenInactive()
+    if (!isClearWhenInactiveConfig || (isClearWhenInactiveConfig && !isInactive())) {
+        def textColor = parent.getTextColor()
+        def colorStyle = ""
+        if (textColor != "#000000") colorStyle = "color:" + textColor
+        if (game != null) {
+            def detailStr = null
+            def gameFinished = (game.status == "Scheduled" || game.status == "InProgress") ? false : true
+            if (game.status == "InProgress") detailStr = game.progress
+            else if (gameFinished) detailStr = game.status
+            else detailStr = game.gameTimeStr   
+            gameTile = "<div style='overflow:auto;height:90%;font-size:${getFontSize()}%;${colorStyle}'><table width='100%'>"
+            gameTile += "<tr><td width='40%' align=center><img src='${game.awayTeam.logo}' width='100%'></td>"
+            gameTile += "<td width='10%' align=center>at</td>"
+            gameTile += "<td width='40%' align=center><img src='${game.homeTeam.logo}' width='100%'></td></tr>"
+            if (parent.showTeamName) {
+                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord && awayTeam.rank != null ? awayTeam.rank : ''} ${awayTeam.name}</td>"
+                gameTile += "<td width='10%' align=center></td>"
+                gameTile += "<td width='40%' align=center>${parent.showTeamRecord && homeTeam.rank != null ? homeTeam.rank : ''} ${homeTeam.name}</td></tr>" 
+            }
+            if (parent.showTeamRecord) {
+                gameTile += "<tr><td width='40%' align=center style='font-size:${getFontSize()*0.75}%;'>${'(' + game.awayTeam.wins + '-' + game.awayTeam.losses + ')'}</td>"
+                gameTile += "<td width='10%' align=center></td>"
+                gameTile += "<td width='40%' align=center style='font-size:${getFontSize()*0.75}%;'>${'(' + game.homeTeam.wins + '-' + game.homeTeam.losses + ')'}</td></tr>"  
+            }
+            gameTile += "<tr style='padding-bottom: 0em'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
+            if (parent.showChannel && game.channel != "null" && game.channel != null && !gameFinished) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:${getFontSize()*0.75}%;'>${game.channel}</td></tr>"
+            gameTile += "</table></div>"  
         }
-        if (parent.showTeamRecord) {
-            gameTile += "<tr><td width='40%' align=center style='font-size:75%'>${'(' + game.awayTeam.wins + '-' + game.awayTeam.losses + ')'}</td>"
-            gameTile += "<td width='10%' align=center></td>"
-            gameTile += "<td width='40%' align=center style='font-size:75%'>${'(' + game.homeTeam.wins + '-' + game.homeTeam.losses + ')'}</td></tr>"  
-        }
-        gameTile += "<tr style='padding-bottom: 0em'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
-        if (parent.showChannel && game.channel != "null" && game.channel != null && !gameFinished) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:75%'>${game.channel}</td></tr>"
-        gameTile += "</table></div>"  
     }
-    else gameTile = "<div style='overflow:auto;height:90%'></div>"
-    // If no game to display, display nothing (keep dashboard clean)
     return gameTile
+}
+
+Boolean isInactive() {
+    def isInactive = false
+    Date now = new Date()
+    Date inactiveDateTime = null
+    Date activeDateTime = null
+    def inactiveThreshold = getInactivityThreshold()
+    if (state.lastGame != null && inactiveThreshold != null) {
+        def lastGameTime = new Date(state.lastGame.gameTime)
+        Calendar cal = Calendar.getInstance()
+        cal.setTimeZone(location.timeZone)
+        cal.setTime(lastGameTime)
+        cal.add(Calendar.HOUR, inactiveThreshold as Integer)
+        inactiveDateTime = cal.time
+      //  logDebug("Inactivity Post-Game scheduled to start ${inactiveDateTime}")        
+    }
+    if (state.nextGame != null && inactiveThreshold != null) {
+        def nextGameTime = new Date(state.nextGame.gameTime)
+        Calendar cal = Calendar.getInstance()
+        cal.setTimeZone(location.timeZone)
+        cal.setTime(nextGameTime)
+        cal.add(Calendar.HOUR, (inactiveThreshold * -1 as Integer))
+        activeDateTime = cal.time
+      //  logDebug("Inactivity Pre-Game scheduled to stop ${activeDateTime}")
+        
+    }   
+    if (inactiveDateTime != null && activeDateTime != null) {
+        if (now.after(inactiveDateTime) && now.before(activeDateTime)) isInactive = true
+    }
+    else if (inactiveDateTime == null && activeDateTime != null) {
+        if (now.before(activeDateTime)) isInactive = true
+    }
+    else if (inactiveDateTime != null && activeDateTime == null) {
+        if (now.after(inactiveDateTime)) isInactive = true
+    }
+    if (isInactive) logDebug("No game within the past ${inactiveThreshold} hour(s) and within the next ${inactiveThreshold} hour(s). ${getClearWhenInactive() ? "Hiding tile." : ""}")
+    return isInactive
 }
 
 
@@ -647,20 +747,25 @@ def sendApiRequest(path)
 		query: [
                 key: apiKey,
             ],
-		timeout: 300
+		timeout: 450
 	]
 
     if (body != null)
         params.body = body
 
-    logDebug("API Call: ${params}")
     def result = null
-    httpGet(params) { resp ->
+    logDebug("Api Call: ${params}")
+    parent.countAPICall(league)
+    try
+    {
+        httpGet(params) { resp ->
         result = resp.data
+        }                
     }
-    if (state.apiCallsThisMonth != null) state.apiCallsThisMonth++
-    else state.apiCallsThisMonth = 1
-    if (state.apiCallsThisMonth > 1000) log.warn "API Call Limit of 1000 per month exceeded. Uncheck 'Clear Teams Data Between Updates' in the app to reduce the number of API calls."
+    catch (Exception e)
+    {
+        log.warn "sendApiRequest() failed: ${e.message}"
+    }   
     return result
 }
             
@@ -718,4 +823,5 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
 
