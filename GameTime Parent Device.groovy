@@ -12,7 +12,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- * V1.0 - Initial Release
+ *  v1.2.0 - Full Feature Beta
+ *  v1.2.1 - Fixed issue with parent device tile update
 **/
 
 metadata
@@ -22,10 +23,11 @@ metadata
         capability "Actuator"
         capability "Switch"
         
+        attribute "tile", "string" 
+        
         attribute "gameTime", "string"
         attribute "gameTimeStr", "string"
-        attribute "status", "string"        
-        attribute "tile", "string"     
+        attribute "status", "string"                    
         attribute "opponent", "string"  
 
     }
@@ -70,6 +72,14 @@ def configure()
     refresh()
 }
 
+def on() {
+    sendEvent(name: "switch", value: "on")
+}
+
+def off() {
+    sendEvent(name: "switch", value: "off")
+}
+
 def configureNextGame(data) {
     sendEvent(name: "gameTime", value: data.gameTime)
     sendEvent(name: "gameTimeStr", value: data.gameTimeStr)
@@ -83,50 +93,75 @@ def updateChildDevice(appID, data)
 {
     def child = getChildDevice("GameTimeChildDevice${appID}")
     if (child) {
-        child.updateDevice(data)
+        child.updateDevice(appID, data)
         updateParentDevice()
     }
     else log.error "No Child Device for app ${appID} found"
 }
 
+def updateChildStatus(appID) {
+    parent.updateAppStatus(appID)
+}
+
 def updateParentDevice() {
     def nextGameChild = null
+    def lastGameChild = null
+    Date now = new Date()
     def children = getChildDevices()
     for(child in children)
     {
         def childGameTime = child.currentValue("gameTime")
-        if (childGameTime != null && childGameTime != "No Game Scheduled") {
-            if (nextGameChild == null) {
-                nextGameChild = child
+        if (childGameTime != "No Game Scheduled" && childGameTime != "No Game Data") {
+            def gameTimeObj = new Date(Long.valueOf(childGameTime))
+            def childStatus = child.currentValue("status")
+            if (gameTimeObj.after(now) || gameTimeObj.equals(now)  || childStatus == "Scheduled" || childStatus == "InProgress"  || childStatus == "Delayed") {         
+                if (nextGameChild == null) {
+                    nextGameChild = child
+                }
+                else {                
+                    def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))                
+                    def nextGameChildStatus = nextGameChild.currentValue("status")
+                    if (childStatus == "InProgress") {
+                        if (nextGameChildStatus != "InProgress") nextGameChild = child
+                         else if (nextGameChildStatus == "InProgress" && nextGameTimeObj.after(gameTimeObj)) nextGameChild = child    // display whichever game started earlier
+                     }
+                     else {
+                         if (nextGameChildStatus != "InProgress" && getSecondsBetweenDates(now, gameTimeObj) < getSecondsBetweenDates(now, nextGameTimeObj)) {
+                               nextGameChild = child
+                         }    
+                     }
+                }
             }
             else {
-                def gameTimeObj = new Date(Long.valueOf(childGameTime))
-                def childStatus = child.currentValue("status ")
-                def nextGameChildStatus = nextGameChild.currentValue("status ")
-                if (childStatus == "InProgress") {
-                    if (nextGameChildStatus != "InProgress") {
-                        nextGameChild = child
-                    }
-                     else if (nextGameChildStatus == "InProgress") {
-                          def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))
-                         if (nextGameTimeObj.after(gameTimeObj)) {
-                             nextGameChild = child    // display whichever game started earlier
-                         }
+                // handle finished game
+                if (lastGameChild == null) lastGameChild = child
+                else {
+                     def lastChildGameTime = new Date(Long.valueOf(lastGameChild.currentValue("gameTime"))) 
+                     if (getSecondsBetweenDates(gameTimeObj, now) < getSecondsBetweenDates(lastChildGameTime, now)) {
+                          lastGameChild = child
                      }
-                 }
-                 else {
-                     if (nextGameChildStatus != "InProgress") {
-                           def nextGameTimeObj = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))
-                           def now = new Date()
-                           if (getSecondsBetweenDates(now, gameTimeObj) < getSecondsBetweenDates(now, nextGameTimeObj)) {
-                                nextGameChild = child
-                           }
-                     }    
-                 }
+                }            
             }
         }
     }
-    if (nextGameChild) copyChild(nextGameChild)
+    
+    def childToDisplay = null
+    if (lastGameChild == null && nextGameChild != null) childToDisplay = nextGameChild
+    else if (nextGameChild == null && lastGameChild != null) childToDisplay = lastGameChild
+    else if (lastGameChild != null && nextGameChild != null) {
+        def lastChildGameTime = new Date(Long.valueOf(lastGameChild.currentValue("gameTime"))) 
+        def nextChildGameTime = new Date(Long.valueOf(nextGameChild.currentValue("gameTime")))  
+        
+        def switchTime = Math.round(getSecondsBetweenDates(lastChildGameTime, nextChildGameTime) / 120) as Integer // switch halfway between
+        Calendar cal = Calendar.getInstance()
+        cal.setTimeZone(location.timeZone)
+        cal.setTime(lastChildGameTime)
+        cal.add(Calendar.MINUTE, switchTime)
+        def switchDate = cal.time
+        if (now.after(switchDate) || now.equals(switchDate)) childToDisplay = nextGameChild
+        else childToDisplay = lastGameChild
+    }
+    if (childToDisplay) copyChild(childToDisplay)
     else clearParent()
 }
 
@@ -146,7 +181,7 @@ def clearParent() {
     sendEvent(name: "tile", value: "<div style='overflow:auto;height:90%'></div>")
     sendEvent(name: "status", value: "No Game Scheduled")
     sendEvent(name: "opponent", value: "No Game Scheduled")
-    sendEvent(name: "switch", value: "off")      
+    sendEvent(name: "switch", value: "off")    
 }
 
 def copyChild(child) {
@@ -160,10 +195,14 @@ def copyChild(child) {
 
 def createChild(appID, name)
 {
-    def child = getChildDevice("GameTimeChildDevice${appID}")
+    def child = getChildDevice("GameTimeChildDevice${appID}")    
     if (!child) {
         String childNetworkID = "GameTimeChildDevice${appID}"
         addChildDevice("lnjustin", "GameTime Child", childNetworkID, [label:name, isComponent:true, name:name])
+    }
+    else {
+        child.setLabel(name)
+        child.setName(name)
     }
 }
 
@@ -180,8 +219,8 @@ def deleteChildren()
     }
 }
 
-
 def refresh()
 {
 
 }
+
