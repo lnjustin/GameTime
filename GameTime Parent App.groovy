@@ -75,19 +75,19 @@ def mainPage() {
     }
 }
 
-def getTextColor() {
+def getTextColorSetting() {
     return (textColor) ? textColor : "#000000"
 }
 
-def getFontSize() {
+def getFontSizeSetting() {
     return fontSize != null ? fontSize : 100
 }
 
-def getInactivityThreshold() {
+def getInactivityThresholdSetting() {
     return hoursInactive != null ? hoursInactive : 24
 }
 
-def getClearWhenInactive() {    
+def getClearWhenInactiveSetting() {    
    // logDebug("In getClearWhenInactive() in parent")
     return clearWhenInactive != null ? clearWhenInactive : false
 }
