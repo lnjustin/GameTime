@@ -16,6 +16,7 @@
  *  v1.2.0 - Full Feature Beta
  *  v1.2.1 - Bug fixes
  *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
+ *  v1.2.3 - Bug fixes
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -78,6 +79,10 @@ def getFontSize() {
     return parent.getFontSize()
 }
 
+def getTextColor() {
+    return parent.getTextColor()
+}
+
 def getTeamKey() {
     return state.team?.key  
 }
@@ -87,6 +92,7 @@ def getInactivityThreshold() {
 }
 
 def getClearWhenInactive() {    
+  //  logDebug("In getClearWhenInactive() in child")
     return parent.getClearWhenInactive()
 }
 
@@ -121,9 +127,14 @@ def initialize() {
         createChild()        
         update(true)
         schedule("01 00 00 ? * *", setSeason)
-        schedule("15 00 00 ? * *", update)
+        schedule("15 00 00 ? * *", scheduledUpdate)
     }
     else log.error "Missing input fields."
+}
+
+def scheduledUpdate()
+{
+    update(true)    
 }
 
 
@@ -292,7 +303,7 @@ def updateRecord(onDemand = false) {
         }
         else logDebug("Team Record has not changed. No update to state.lastRecord made.")
         def lastGameResult = getLastGameResult(onDemand)
-        state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
+        if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
         updateDisplayedGame()
     }
 }
@@ -322,11 +333,12 @@ def getLastGameResult(suppressRetry = false) {
     def recordNotUpdated = false
     def currentRecord = getRecord(state.team)
     if (state.lastRecord == null) {
-        log.warn "Unable to determine result of last game for ${state.team.displayName}. Last team record not stored."
+        def warning = "Unable to determine result of last game for ${state.team.displayName}. Last team record not stored."
         if (suppressRetry == false) {
             runIn(600, updateRecord)
-            log.warn " Will keep checking."
+            warning += " Will keep checking."
         }
+        logDebug(warning)
         return null
     }
     else if (state.lastGame != null && state.lastRecord.asOf <= state.lastGame.gameTime) {
@@ -365,7 +377,7 @@ def getLastGameResult(suppressRetry = false) {
             }
         }
         warning += " Last Record is wins: ${state.lastRecord.wins} losses: ${state.lastRecord.losses}${league == "NFL" ? " ties: " + state.lastRecord.ties : ""}${league == "NHL" ? " OT losses: " + state.lastRecord.overtimeLosses : ""}. Current Record is wins: ${currentRecord.wins} losses: ${currentRecord.losses}${league == "NFL" ? " ties: " + currentRecord.ties : ""}${league == "NHL" ? " OT losses: " + currentRecord.overtimeLosses : ""}."
-        log.warn warning
+        logDebug(warning)
     }          
     else logDebug("Determined last game result: ${result}")
     return result
@@ -590,7 +602,7 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         }
         else if (state.nextGame.status == "Scheduled" && now.after(nextGameTime)) {
             // game should have already started by now, but sportsdata.io has not updated its API to reflect it yet (10 minute delay for free API). Update in 10 minutes
-            log.warn "Game should have started by now, but status still indicates the game is scheduled, not in progress."
+            logDebug("Game should have started by now, but status still indicates the game is scheduled, not in progress. This is not uncommon. Will check again in 10 minutes.")
             runIn(600, updateGameInProgress) // update every 10 minutes
         }  
         else if (updatingGameInProgress) {
@@ -617,6 +629,7 @@ def getSwitchValue() {
     def switchValue = "off"
     if (state.lastGame != null && isToday(new Date(state.lastGame.gameTime)) && state.lastGame.status != "Canceled" && state.lastGame.status != "Postponed") switchValue = "on"
     if (state.nextGame != null && isToday(new Date(state.nextGame.gameTime)) && state.nextGame.status != "Canceled" && state.nextGame.status != "Postponed") switchValue = "on"
+    if (state.nextGame != null && isYesterday(new Date(state.nextGame.gameTime)) && state.nextGame.status == "InProgress") switchValue = "on" // late night game spilled into the next day
     return switchValue
 }
 
@@ -625,7 +638,8 @@ def getGameTile(game) {
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
     def isClearWhenInactiveConfig = getClearWhenInactive()
     if (!isClearWhenInactiveConfig || (isClearWhenInactiveConfig && !isInactive())) {
-        def textColor = parent.getTextColor()
+        def textColor = getTextColor()
+        def fontSize = getFontSize()
         def colorStyle = ""
         if (textColor != "#000000") colorStyle = "color:" + textColor
         if (game != null) {
@@ -635,7 +649,7 @@ def getGameTile(game) {
             else if (gameFinished) detailStr = game.status
             else detailStr = game.gameTimeStr   
         
-            gameTile = "<div style='overflow:auto;height:90%;font-size:${getFontSize()}%;${colorStyle};'><table width='100%'>"
+            gameTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;${colorStyle};'><table width='100%'>"
             gameTile += "<tr><td width='40%' align=center><img src='${game.awayTeam.logo}' width='100%'></td>"
             gameTile += "<td width='10%' align=center>at</td>"
             gameTile += "<td width='40%' align=center><img src='${game.homeTeam.logo}' width='100%'></td></tr>"
@@ -651,12 +665,12 @@ def getGameTile(game) {
                 def homeTeamRecordSuffix = ""
                 if (league == "NHL") homeTeamRecordSuffix = "-" + game.homeTeam.overtimeLosses
                 else if (league == "NFL") homeTeamRecordSuffix = "-" + game.homeTeam.ties    
-                gameTile += "<tr><td width='40%' align=center style='font-size:${getFontSize()*0.75}%'>${'(' + game.awayTeam.wins + '-' + game.awayTeam.losses + awayTeamRecordSuffix + ')'}</td>"
+                gameTile += "<tr><td width='40%' align=center style='font-size:${fontSize*0.75}%'>${'(' + game.awayTeam.wins + '-' + game.awayTeam.losses + awayTeamRecordSuffix + ')'}</td>"
                 gameTile += "<td width='10%' align=center></td>"
-                gameTile += "<td width='40%' align=center style='font-size:${getFontSize()*0.75}%'>${'(' + game.homeTeam.wins + '-' + game.homeTeam.losses + homeTeamRecordSuffix + ')'}</td></tr>"  
+                gameTile += "<td width='40%' align=center style='font-size:${fontSize*0.75}%'>${'(' + game.homeTeam.wins + '-' + game.homeTeam.losses + homeTeamRecordSuffix + ')'}</td></tr>"  
             }
             gameTile += "<tr style='padding-bottom: 0em;'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
-            if (parent.showChannel && game.channel != "null" && game.channel != null && !gameFinished) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:${getFontSize()*0.75}%'>${game.channel}</td></tr>"
+            if (parent.showChannel && game.channel != "null" && game.channel != null && !gameFinished) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:${fontSize*0.75}%'>${game.channel}</td></tr>"
             gameTile += "</table></div>"  
         }    
     }
@@ -843,7 +857,7 @@ def sendApiRequest(path)
 		query: [
                 key: apiKey,
             ],
-		timeout: 450
+		timeout: 800
 	]
 
     if (body != null)
@@ -933,5 +947,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
