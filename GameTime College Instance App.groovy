@@ -80,24 +80,24 @@ def mainPage() {
     }
 }
 
-def getFontSize() {
-    return parent.getFontSize()
+def getFontSizeSetting() {
+    return parent.getFontSizeSetting()
 }
 
-def getTextColor() {
-    return parent.getTextColor()
+def getTextColorSetting() {
+    return parent.getTextColorSetting()
 }
 
 def getClearStateSetting() {
     return clearStateBetweenUpdate != null ? clearStateBetweenUpdate : true
 }
 
-def getInactivityThreshold() {
-    return parent.getInactivityThreshold()
+def getInactivityThresholdSetting() {
+    return parent.getInactivityThresholdSetting()
 }
 
-def getClearWhenInactive() {    
-    return parent.getClearWhenInactive()
+def getClearWhenInactiveSetting() {    
+    return parent.getClearWhenInactiveSetting()
 }
 
 def getTeamKey() {
@@ -580,10 +580,10 @@ def getSwitchValue() {
 // TO DO: show next game on tile whenever showing last game?
 def getGameTile(game) {
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
-    def isClearWhenInactiveConfig = getClearWhenInactive()
+    def isClearWhenInactiveConfig = getClearWhenInactiveSetting()
     if (!isClearWhenInactiveConfig || (isClearWhenInactiveConfig && !isInactive())) {
-        def textColor = getTextColor()
-        def fontSize = getFontSize()
+        def textColor = getTextColorSetting()
+        def fontSize = getFontSizeSetting()
         def colorStyle = ""
         if (textColor != "#000000") colorStyle = "color:" + textColor
         if (game != null) {
@@ -619,7 +619,7 @@ Boolean isInactive() {
     Date now = new Date()
     Date inactiveDateTime = null
     Date activeDateTime = null
-    def inactiveThreshold = getInactivityThreshold()
+    def inactiveThreshold = getInactivityThresholdSetting()
     if (state.lastGame != null && inactiveThreshold != null) {
         def lastGameTime = new Date(state.lastGame.gameTime)
         Calendar cal = Calendar.getInstance()
@@ -648,7 +648,7 @@ Boolean isInactive() {
     else if (inactiveDateTime != null && activeDateTime == null) {
         if (now.after(inactiveDateTime)) isInactive = true
     }
-    if (isInactive) logDebug("No game within the past ${inactiveThreshold} hour(s) and within the next ${inactiveThreshold} hour(s). ${getClearWhenInactive() ? "Hiding tile." : ""}")
+    if (isInactive) logDebug("No game within the past ${inactiveThreshold} hour(s) and within the next ${inactiveThreshold} hour(s). ${getClearWhenInactiveSetting() ? "Hiding tile." : ""}")
     return isInactive
 }
 
