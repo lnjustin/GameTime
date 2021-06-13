@@ -14,6 +14,7 @@
  *
  *  v1.2.0 - Full Feature Beta
  *  v1.2.1 - Fixed issue with parent device tile update
+ *  v1.2.3 - Bug fixes
 **/
 
 metadata
@@ -99,10 +100,6 @@ def updateChildDevice(appID, data)
     else log.error "No Child Device for app ${appID} found"
 }
 
-def updateChildStatus(appID) {
-    parent.updateAppStatus(appID)
-}
-
 def updateParentDevice() {
     def nextGameChild = null
     def lastGameChild = null
@@ -111,7 +108,7 @@ def updateParentDevice() {
     for(child in children)
     {
         def childGameTime = child.currentValue("gameTime")
-        if (childGameTime != "No Game Scheduled" && childGameTime != "No Game Data") {
+        if (childGameTime != null && childGameTime != "No Game Scheduled" && childGameTime != "No Game Data") {
             def gameTimeObj = new Date(Long.valueOf(childGameTime))
             def childStatus = child.currentValue("status")
             if (gameTimeObj.after(now) || gameTimeObj.equals(now)  || childStatus == "Scheduled" || childStatus == "InProgress"  || childStatus == "Delayed") {         
@@ -158,7 +155,8 @@ def updateParentDevice() {
         cal.setTime(lastChildGameTime)
         cal.add(Calendar.MINUTE, switchTime)
         def switchDate = cal.time
-        if (now.after(switchDate) || now.equals(switchDate)) childToDisplay = nextGameChild
+        if (nextGameChild.currentValue("status") == "InProgress" || nextGameChild.currentValue("status") == "Delayed") childToDisplay = nextGameChild
+        else if (now.after(switchDate) || now.equals(switchDate)) childToDisplay = nextGameChild
         else childToDisplay = lastGameChild
     }
     if (childToDisplay) copyChild(childToDisplay)
@@ -223,4 +221,3 @@ def refresh()
 {
 
 }
-
