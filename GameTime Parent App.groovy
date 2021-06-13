@@ -16,6 +16,7 @@
  *  v1.2.0 - Full Feature Beta
  *  v1.2.1 - Bug fixes
  *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
+ *  v1.2.3 - Bug fixes
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -41,10 +42,9 @@ preferences {
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
-       
-            section (getInterface("header", " GameTime")) {
-    	        installCheck()
-		        if(state.appInstalled == 'COMPLETE'){
+    	    installCheck()
+		    if(state.appInstalled == 'COMPLETE'){       
+                section (getInterface("header", " GameTime")) {
 			        section(getInterface("header", " College Sports")) {
 				        app(name: "anyOpenApp", appName: "GameTime College Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for college sports</b>", multiple: true)
 			        }
@@ -55,19 +55,19 @@ def mainPage() {
                         paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
                     }
                 }
+                section (getInterface("header", " Tile Settings")) {
+                    input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
+                    input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
+                    input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
+                    input(name:"fontSize", type: "number", title: "Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
+                    input("textColor", "text", title: "Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
+                    input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
+                    input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
+                }
+			    section (getInterface("header", " General Settings")) {
+                    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
+		        }
             }
-            section (getInterface("header", " Tile Settings")) {
-                input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                input(name:"fontSize", type: "number", title: "Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                input("textColor", "text", title: "Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
-                input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
-                input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
-            }
-			section (getInterface("header", " General Settings")) {
-                input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
-		    }
             section("") {
                 
                 footer()
@@ -88,6 +88,7 @@ def getInactivityThreshold() {
 }
 
 def getClearWhenInactive() {    
+   // logDebug("In getClearWhenInactive() in parent")
     return clearWhenInactive != null ? clearWhenInactive : false
 }
 
@@ -103,12 +104,16 @@ def installed() {
 def updated() {
     unschedule()
 	unsubscribe()
+    def storedAPICalls = state.apiCallsThisMonth
+    def numMonths = state.numMonthsInstalled
     state.clear()
+    if (storedAPICalls != null) state.apiCallsThisMonth = storedAPICalls
+    if (numMonths != null) state.numMonthsInstalled = numMonths
 	initialize()
 }
 
 def uninstalled() {
-    deleteParentDevice()
+    deleteDevices()
 	logDebug "Uninstalled app"
 }
 
@@ -141,7 +146,7 @@ def installCheck(){
 		section{paragraph "Please hit 'Done' to install '${app.label}' parent app "}
   	}
   	else{
-    	log.info "Parent Installed OK"
+    	log.info "Parent Installed"
   	}
 }
 
@@ -159,9 +164,19 @@ def createParentDevice()
     }
 }
 
-def deleteParentDevice()
+def deleteDevices() 
 {
+    deleteChildredDevices()
     deleteChildDevice("GameTimeParentDevice${app.id}")
+}
+
+def deleteChildredDevices() 
+{
+    def parent = getChildDevice("GameTimeParentDevice${app.id}")
+    if (parent) {
+        parent.deleteChildren()
+    }
+    else log.error "No Parent Device Found. No child devices deleted."    
 }
 
 def deleteChildDevice(appID) {
@@ -265,5 +280,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
