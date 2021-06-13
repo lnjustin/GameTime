@@ -13,6 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  v1.2.0 - Full Feature Beta
+ *  v1.2.3 - Bug fixes
 **/
 
 metadata
@@ -29,7 +30,6 @@ metadata
         attribute "status", "string"     
         attribute "opponent", "string" 
         
-        command "updateStatus"
     }
 }
 
@@ -86,11 +86,6 @@ def updateDevice(appID, data) {
 
 def getDeviceData() {
     def data = [gameTime: gameTime]    
-}
-
-def updateStatus() {
-    // parent.updateChildStatus(state.appID)
-    parent.updateChildStatus(1113)
 }
 
 def refresh()
