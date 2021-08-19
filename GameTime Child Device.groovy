@@ -14,6 +14,7 @@
  *
  *  v1.2.0 - Full Feature Beta
  *  v1.2.3 - Bug fixes
+ *  v1.2.4 - Added option to hide game result spoilers
 **/
 
 metadata
