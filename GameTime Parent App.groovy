@@ -17,6 +17,7 @@
  *  v1.2.1 - Bug fixes
  *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  *  v1.2.3 - Bug fixes
+ *  v1.2.4 - Added option to hide game result spoilers
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
