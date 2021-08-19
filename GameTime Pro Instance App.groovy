@@ -17,6 +17,7 @@
  *  v1.2.1 - Bug fixes
  *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  *  v1.2.3 - Bug fixes
+ *  v1.2.4 - Added option to hide game result spoilers
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -65,6 +66,7 @@ def mainPage() {
             }
             section (getInterface("header", " Settings")) {
                 if (apiKey && league) input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
+                if (team) input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
                 if (team) label title: "GameTime Instance Name", required:false, submitOnChange:true
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		    }
@@ -77,6 +79,10 @@ def mainPage() {
 
 def getFontSizeSetting() {
     return parent.getFontSizeSetting()
+}
+
+def getHideGameResultSetting() {
+    return hideGameResult ? hideGameResult : false
 }
 
 def getTextColorSetting() {
@@ -220,6 +226,12 @@ def updateState(onInitialize = false) {
     def storedRecord = getRecord(state.team)
     
     def schedule = fetchTeamSchedule()
+    if (schedule == "Error: first byte timeout") {
+        log.warn "API call timeout. Not updating state. Will try again later."
+        runIn(600, update)
+        return
+    }
+    
     def now = new Date()
     def lastGame = null
     def nextGame = null
@@ -274,9 +286,11 @@ def updateState(onInitialize = false) {
             }
         }
     }
-    def lastGameResult = getLastGameResult(onInitialize)
-    // TO DO: build in a safeguard to make sure status is only set to result if the last game's status was F, F/OT, or F/SO (not canceled, etc.)
-    if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
+    if (getHideGameResultSetting() == null || getHideGameResultSetting() == false) {
+        def lastGameResult = getLastGameResult(onInitialize)
+        // TO DO: build in a safeguard to make sure status is only set to result if the last game's status was F, F/OT, or F/SO (not canceled, etc.)
+        if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
+    }
     
     Date dateToUpdateDisplay = getDateToSwitchFromLastToNextGame()
     if (dateToUpdateDisplay != null && dateToUpdateDisplay.after(now)) runOnce(dateToUpdateDisplay, updateDisplayedGame)
@@ -757,7 +771,10 @@ def fetchTeamSchedule() {
         else leagueSchedule = sendApiRequest("/scores/json/Games/" + state.season)
     }
     def teamSchedule = []
-    if (leagueSchedule) {
+    if (leagueSchedule == "Error: first byte timeout") {
+        return leagueSchedule
+    }
+    else if (leagueSchedule != null) {
         for (game in leagueSchedule) {
             if (game.AwayTeam == state.team.key || game.HomeTeam == state.team.key) {
              //   logDebug("Adding game to team schedule with gametime of ${game.DateTime}")
@@ -858,7 +875,7 @@ def sendApiRequest(path)
 		query: [
                 key: apiKey,
             ],
-		timeout: 800
+		timeout: 1000
 	]
 
     if (body != null)
@@ -876,6 +893,7 @@ def sendApiRequest(path)
     catch (Exception e)
     {
         log.warn "sendApiRequest() failed: ${e.message}"
+        return "Error: ${e.message}"
     }   
     return result
 }
