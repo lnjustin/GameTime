@@ -18,6 +18,7 @@
  *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
  *  v1.2.3 - Bug fixes
  *  v1.2.4 - Added option to hide game result spoilers
+ *  v1.2.5 - Bug fixes
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -611,9 +612,9 @@ def getGameTile(game) {
             gameTile += "<td width='10%' align=center>at</td>"
             gameTile += "<td width='40%' align=center><img src='${game.homeTeam.logo}' width='100%'></td></tr>"
             if (parent.showTeamName) {
-                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord && awayTeam.rank != null ? awayTeam.rank : ''} ${awayTeam.name}</td>"
+                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${parent.showTeamRecord && game.awayTeam.rank != null ? game.awayTeam.rank : ''} ${game.awayTeam.name}</td>"
                 gameTile += "<td width='10%' align=center></td>"
-                gameTile += "<td width='40%' align=center>${parent.showTeamRecord && homeTeam.rank != null ? homeTeam.rank : ''} ${homeTeam.name}</td></tr>" 
+                gameTile += "<td width='40%' align=center>${parent.showTeamRecord && game.homeTeam.rank != null ? game.homeTeam.rank : ''} ${game.homeTeam.name}</td></tr>" 
             }
             if (parent.showTeamRecord) {
                 gameTile += "<tr><td width='40%' align=center style='font-size:${fontSize*0.75}%;'>${'(' + game.awayTeam.wins + '-' + game.awayTeam.losses + ')'}</td>"
