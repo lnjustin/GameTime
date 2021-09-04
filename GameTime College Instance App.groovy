@@ -19,6 +19,7 @@
  *  v1.2.3 - Bug fixes
  *  v1.2.4 - Added option to hide game result spoilers
  *  v1.2.5 - Bug fixes
+ *  v1.2.6 - Bug fixes
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -214,7 +215,6 @@ def update(onInitialize = false) {
     updateState(onInitialize)
     updateDisplayedGame()
     scheduleUpdate()
-    if (getClearStateSetting()) state.remove("teams") // clear teams state between updates since state is large
 }
 
 Date getGameTime(game) {
@@ -407,6 +407,7 @@ def updateAPICallInfo() {
 def getGameData(game) {
     def gameData = null
     if (game != null) {
+        def gameID = game.GameID
         def gameTime = getGameTime(game)
         def gameTimeStr = getGameTimeStr(gameTime)        
         def status = game.Status
@@ -420,13 +421,14 @@ def getGameData(game) {
         else if (awayTeam.key == state.team.key) opponent = homeTeam
         else log.error "Team Not Playing in Game"         
 
-        gameData = [id: game.gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, status: status, progress: progress, channel: channel]
+        gameData = [id: gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, status: status, progress: progress, channel: channel]
 
     }
     return gameData
 }
 
-def scheduleUpdate(Boolean updatingGameInProgress=false) {    
+def scheduleUpdate(Boolean updatingGameInProgress=false) {  
+    def shouldClearTeamState = true
     if (state.nextGame) {
         def nextGameTime = new Date(state.nextGame.gameTime)
         def now = new Date()
@@ -444,22 +446,27 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         }
         else if (state.nextGame.status == "InProgress") {
             // update in progress game no matter whether game started today or not, since late night game will progress into the next day
+            shouldClearTeamState = false // don't clear team state when game is in progress
             runIn(600, updateGameInProgress) // while game is in progress, update every 10 minutes
         }
         else if (state.nextGame.status == "Delayed") {
             // update dalyed game no matter whether game started today or not, since late night game will delay into the next day
+            shouldClearTeamState = false // don't clear team state when game is in progress
             runIn(1800, updateGameInProgress) // while game is delayed, update every 30 minutes
         }
         else if (state.nextGame.status == "Scheduled" && now.after(nextGameTime)) {
             // game should have already started by now, but sportsdata.io has not updated its API to reflect it yet (10 minute delay for free API). Update in 10 minutes
             logDebug("Game should have started by now, but status still indicates the game is scheduled, not in progress. This is not uncommon. Will check again in 10 minutes.")
+            shouldClearTeamState = false // don't clear team state when game is in progress
             runIn(600, updateGameInProgress) // update every 10 minutes
         }  
         else if (updatingGameInProgress) {
             // game is over or cancelled. Update game state
+            shouldClearTeamState = false // don't clear team state when game is in progress
             update()
         }
     }
+    if (shouldClearTeamState && getClearStateSetting()) state.remove("teams") // clear teams state between updates since state is large
 }
 
 def doubleDigit(num) {
@@ -473,13 +480,21 @@ def doubleDigit(num) {
 
 def getProgress(game) {
     def progressStr = ""
-    def timeRemaining = game.TimeRemainingMinutes + ":" + doubleDigit(game.TimeRemainingSeconds)
-    if (league == "Men's College Basketball" || league == "Women's College Basketball") {
-         if (game.Period == "1") progressStr = "1st " + timeRemaining
-         else if (game.Period == "2") progressStr = "2nd " + timeRemaining
+    if (game.TimeRemainingMinutes != null && game.TimeRemainingSeconds != null && game.Period != null) {
+        def timeRemaining = game.TimeRemainingMinutes + ":" + doubleDigit(game.TimeRemainingSeconds)
+        if (league == "Men's College Basketball" || league == "Women's College Basketball") {
+             if (game.Period == "1") progressStr = "1st " + timeRemaining
+             else if (game.Period == "2") progressStr = "2nd " + timeRemaining
+        }
+        else if (league == "College Football") {
+             if (game.Period == "1" || game.Period == "2" || game.Period == "3" || game.Period == "4") progressStr = game.Period + "Q " + timeRemaining
+        
+        }
+        logDebug("Updating game progress. progressStr = ${progressStr}. game.Period = ${game.Period} with timeRemaining = ${timeRemaining}. Full Game is ${game}")
     }
-    else if (league == "College Football") {
-         if (game.Period == "1" || game.Period == "2" || game.Period == "3" || game.Period == "4") progressStr = game.Period + "Q " + timeRemaining
+    else {
+        progressStr = "In Progress"
+        logDebug("No data for game's progress. Full Game is ${game}")
     }
     return progressStr
 }
@@ -563,7 +578,7 @@ def getUpdatedGameData(gameToUpdate) {
     def schedule = fetchTeamSchedule()
     def updatedGameData = null
     for (game in schedule) {
-        def gameID = getGameID(game)
+        def gameID = game.GameID
         if (gameToUpdate.id == gameID) {
             updatedGameData = getGameData(game)
         }
@@ -573,6 +588,7 @@ def getUpdatedGameData(gameToUpdate) {
 
 def updateGameInProgress() {
     if (state.nextGame) {
+        if (!state.teams) setTeams()
         def updatedGameData = getUpdatedGameData(state.nextGame)   
         if (updatedGameData != null) {
             logDebug("Updating game in progress. Progress is ${updatedGameData.progress}. Status is ${updatedGameData.status}")
@@ -855,4 +871,5 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
 
