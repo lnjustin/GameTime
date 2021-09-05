@@ -20,6 +20,7 @@
  *  v1.2.4 - Added option to hide game result spoilers
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
+ *  v1.2.7 - Hide record when hide game spoilers
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -675,7 +676,7 @@ def getGameTile(game) {
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center>${game.homeTeam.name}</td></tr>" 
             }
-            if (parent.showTeamRecord) {
+            if (parent.showTeamRecord && !getHideGameResultSetting()) {
                 def awayTeamRecordSuffix = ""
                 if (league == "NHL") awayTeamRecordSuffix = "-" + game.awayTeam.overtimeLosses
                 else if (league == "NFL") awayTeamRecordSuffix = "-" + game.awayTeam.ties
@@ -968,4 +969,5 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
 
