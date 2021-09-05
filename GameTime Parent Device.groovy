@@ -20,6 +20,7 @@
  *  v1.2.4 - Added option to hide game result spoilers
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
+ *  v1.2.7 - Hide record when hide game spoilers
 **/
 
 metadata
