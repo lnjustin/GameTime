@@ -21,6 +21,7 @@
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
+ *  v1.3.0 - Added option to designate team as Low Priority
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -170,11 +171,11 @@ def createParentDevice()
 
 def deleteDevices() 
 {
-    deleteChildredDevices()
+    deleteChildrenDevices()
     deleteChildDevice("GameTimeParentDevice${app.id}")
 }
 
-def deleteChildredDevices() 
+def deleteChildrenDevices() 
 {
     def parent = getChildDevice("GameTimeParentDevice${app.id}")
     if (parent) {
@@ -191,10 +192,10 @@ def deleteChildDevice(appID) {
     else log.error "No Parent Device Found."
 }
 
-def createChildDevice(appID, name) {
+def createChildDevice(appID, name, isLowPriority, lowPriorityThreshold) {
     def parent = getChildDevice("GameTimeParentDevice${app.id}")
     if (parent) {
-        parent.createChild(appID, name)
+        parent.createChild(appID, name, isLowPriority, lowPriorityThreshold)
     }
     else log.error "No Parent Device Found."
 }
