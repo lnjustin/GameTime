@@ -21,6 +21,7 @@
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
+ *  v1.3.0 - Added option to designate team as Low Priority
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -67,10 +68,15 @@ def mainPage() {
                 }
                 
             }
-            section (getInterface("header", " Settings")) {
-                if (apiKey && league) input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
+            section (getInterface("header", " Settings")) {                
                 if (team) input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
+                if (team) {
+                    input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
+                    input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
+                    paragraph getInterface("note", "A low priority team will only display on the 'all teams' GameTime device if no higher priority team has a game within X hours. The Low Priority Team Hour Threshold specifies X.") 
+                }
                 if (team) label title: "GameTime Instance Name", required:false, submitOnChange:true
+                if (apiKey && league) input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		    }
             section("") {
@@ -78,6 +84,14 @@ def mainPage() {
                 footer()
             }
     }
+}
+
+def getLowPriorityThresholdSetting() {
+    return priorityHourThreshold != null ? priorityHourThreshold : 24
+}
+
+def getLowPrioritySetting() {
+    return lowPriority ? lowPriority : false
 }
 
 def getFontSizeSetting() {
@@ -861,7 +875,11 @@ def getMyTeamName() {
 def createChild()
 {
     def name = state.team?.displayName
-    parent.createChildDevice(app.id, name)
+    
+    def lowPriorityThreshold = getLowPriorityThresholdSetting()
+    def isLowPriority = getLowPrioritySetting()
+    
+    parent.createChildDevice(app.id, name, isLowPriority, lowPriorityThreshold)
 }
 
 def deleteChild()
@@ -969,5 +987,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
