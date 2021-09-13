@@ -21,6 +21,7 @@
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
+ *  v1.3.0 - Added option to designate team as Low Priority
 **/
 
 metadata
@@ -101,9 +102,29 @@ def updateChildDevice(appID, data)
     def child = getChildDevice("GameTimeChildDevice${appID}")
     if (child) {
         child.updateDevice(appID, data)
-        updateParentDevice()
+        runIn(5, "updateParentDevice")
     }
     else log.error "No Child Device for app ${appID} found"
+}
+
+def anyHighPriorityGameNear(lowPriorityChild, children) {
+    def anyNear = false
+    def thresholdInSecs = lowPriorityChild.getThreshold() * 3600
+    for (child in children) {
+        if (child != lowPriorityChild && !child.isLowPriority()) {
+            def childGameTime = child.currentValue("gameTime")
+            def lowPriorityGameTime = lowPriorityChild.currentValue("gameTime")
+            if (childGameTime != "No Game Data" && childGameTime != "No Game Scheduled" && lowPriorityGameTime != "No Game Data" && lowPriorityGameTime != "No Game Scheduled") {
+                Date lowPriorityGameTimeDate = new Date(Long.valueOf(lowPriorityGameTime))
+                Date childGameTimeDate = new Date(Long.valueOf(childGameTime))   
+                def secsDiff = getSecondsBetweenDates(lowPriorityGameTimeDate, childGameTimeDate)
+                if (secsDiff == 0) anyNear = true
+                else if (secsDiff > 0 && secsDiff < thresholdInSecs) anyNear = true
+                else if (secsDiff < 0 && secsDiff > -1*thresholdInSecs) anyNear = true
+            }
+        }
+    }
+    return anyNear
 }
 
 def updateParentDevice() {
@@ -111,8 +132,14 @@ def updateParentDevice() {
     def lastGameChild = null
     Date now = new Date()
     def children = getChildDevices()
+    def filteredChildren = []
     for(child in children)
     {
+        if (child.isLowPriority() && !anyHighPriorityGameNear(child, children)) filteredChildren.add(child)  // only add if no high priority game near in time to this low priority child
+        else if (!child.isLowPriority()) filteredChildren.add(child)
+    }
+    for(child in filteredChildren)
+    {    
         def childGameTime = child.currentValue("gameTime")
         if (childGameTime != null && childGameTime != "No Game Scheduled" && childGameTime != "No Game Data") {
             def gameTimeObj = new Date(Long.valueOf(childGameTime))
@@ -197,16 +224,18 @@ def copyChild(child) {
     sendEvent(name: "switch", value: child.currentValue("switch"))    
 }
 
-def createChild(appID, name)
+def createChild(appID, name, isLowPriority, lowPriorityThreshold)
 {
     def child = getChildDevice("GameTimeChildDevice${appID}")    
     if (!child) {
         String childNetworkID = "GameTimeChildDevice${appID}"
-        addChildDevice("lnjustin", "GameTime Child", childNetworkID, [label:name, isComponent:true, name:name])
+        def newChild = addChildDevice("lnjustin", "GameTime Child", childNetworkID, [label:name, isComponent:true, name:name])
+        newChild.configurePriority(isLowPriority, lowPriorityThreshold)
     }
     else {
         child.setLabel(name)
         child.setName(name)
+        child.configurePriority(isLowPriority, lowPriorityThreshold)
     }
 }
 
