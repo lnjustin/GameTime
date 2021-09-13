@@ -21,6 +21,7 @@
  *  v1.2.5 - Bug fixes
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
+ *  v1.3.0 - Added option to designate team as Low Priority
 **/
 
 metadata
@@ -93,6 +94,19 @@ def updateDevice(appID, data) {
 
 def getDeviceData() {
     def data = [gameTime: gameTime]    
+}
+
+def configurePriority(isLowPriority, lowPriorityThreshold) {
+    state.isLowPriority = isLowPriority
+    state.lowPriorityThreshold = lowPriorityThreshold
+}
+
+def isLowPriority() {
+   return state.isLowPriority 
+}
+
+def getThreshold() {
+    return state.lowPriorityThreshold    
 }
 
 def refresh()
