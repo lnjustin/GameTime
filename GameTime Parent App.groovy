@@ -22,6 +22,7 @@
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
  *  v1.3.0 - Added option to designate team as Low Priority
+ *  v1.3.1 - Fixed issue with NFL bye weeks
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
