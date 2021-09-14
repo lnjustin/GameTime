@@ -22,6 +22,7 @@
  *  v1.2.6 - Bug fixes
  *  v1.2.7 - Hide record when hide game spoilers
  *  v1.3.0 - Added option to designate team as Low Priority
+ *  v1.3.1 - Fixed issue with NFL bye weeks
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -255,7 +256,7 @@ def updateState(onInitialize = false) {
     for (game in schedule) {
         def gameTime = getGameTime(game)
         def status = game.Status 
-        if (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed") {
+        if (gameTime != null && (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed")) {
             // handle upcoming game
             // TO DO: Consider a game with a status of "Canceled" as the next game or not?
             if (nextGame == null) nextGame = game
@@ -272,7 +273,7 @@ def updateState(onInitialize = false) {
                 }
             }
         }
-        else {
+        else if (gameTime != null) {
             // handle finished game
             if (lastGame == null) lastGame = game
             else {
