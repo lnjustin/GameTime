@@ -81,6 +81,7 @@ def mainPage() {
                 }
                 input("clearStateBetweenUpdate", "bool", title: "Clear teams data between updates?", defaultValue: true, required: false)
                 paragraph getInterface("note", "Enabling Clear 'Teams Data Between Updates' reduces state size. Disabling conserves API calls.")
+                if (team) input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
                 if (team) label title: "GameTime Instance Name", defaultValue: team + " GameTime Instance", required:false, submitOnChange:true
                 if (apiKey && league) input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
@@ -90,6 +91,10 @@ def mainPage() {
                 footer()
             }
     }
+}
+
+Integer getNumGamesForScheduleSetting() {
+    return numGamesForSchedule != null ? (int) numGamesForSchedule : 3
 }
 
 def getLowPriorityThresholdSetting() {
@@ -234,6 +239,83 @@ def update(onInitialize = false) {
     scheduleUpdate()
 }
 
+def getScheduleTile() {  
+    logDebug("Getting schedule tile for ${state.team.displayName}")
+    def scheduleTile = "<div style='overflow:auto;height:90%'></div>"
+    def textColor = getTextColorSetting()
+    def fontSize = getFontSizeSetting()
+    def colorStyle = ""
+    if (textColor != "#000000") colorStyle = "color:" + textColor
+    if (state.schedule != null) {
+        scheduleTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;${colorStyle};'><table width='100%' style='border-collapse: collapse'>"
+        def numRows = 0
+        for (game in state.schedule) {
+            scheduleTile += "<tr${numRows % 2 == 1 ? " style='background-color:#F5F5F5'": null}><td width='30%' style='padding:0;margin:0' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
+            scheduleTile += "<td width='40%' style='padding:0;margin:0' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='20%'> ${game.opponent}</td>"
+            scheduleTile += "<td width='30%' style='padding:0;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
+            numRows++
+        }
+        scheduleTile += "</table></div>"  
+    }    
+    return scheduleTile
+}
+
+String getGameDate(gameTime) {
+    Date gameTimeDateObj = new Date(gameTime)
+    def dateFormat = new SimpleDateFormat("MMM d")
+    dateFormat.setTimeZone(location.timeZone)        
+    def gameDateStr = dateFormat.format(gameTimeDateObj)    
+    return gameDateStr
+}
+
+String getGameDayOfWeek(gameTime) {
+    Date gameTimeDateObj = new Date(gameTime)
+    def dateFormat = new SimpleDateFormat("EEE")
+    dateFormat.setTimeZone(location.timeZone)        
+    def gameDayOfWeekStr = dateFormat.format(gameTimeDateObj)    
+    return gameDayOfWeekStr    
+}
+
+String getGameTimeOfDay(gameTime) {
+    Date gameTimeDateObj = new Date(gameTime)
+    def dateFormat = new SimpleDateFormat("h:mm a")
+    dateFormat.setTimeZone(location.timeZone)        
+    def gameTimeOfDayStr = dateFormat.format(gameTimeDateObj)    
+    return gameTimeOfDayStr    
+}
+
+def getScheduleData(upcomingSchedule) {
+    def scheduleData = []
+    for (game in upcomingSchedule) {
+        if (game != null) {
+            def gameTime = getGameTime(game)              
+            def homeTeam = state.teams[game.HomeTeam]
+            def awayTeam = state.teams[game.AwayTeam]
+            def opponent = null
+            def opponentLogo = null
+            def homeOrAway = null
+            if (homeTeam.key == state.team.key) {
+                opponent = awayTeam.name
+                opponentLogo = awayTeam.logo
+                homeOrAway = "home"
+            }
+            else if (awayTeam.key == state.team.key) {
+                opponent = homeTeam.name
+                opponentLogo = homeTeam.logo
+                homeOrAway = "away"
+            }
+
+            def gameData = [gameTime: gameTime.getTime(), homeOrAway: homeOrAway, opponent: opponent, opponentLogo: opponentLogo]
+            scheduleData.add(gameData)
+        }        
+    }
+
+    scheduleData = scheduleData.sort {it.gameTime}
+    scheduleData = scheduleData.subList(0, getNumGamesForScheduleSetting())
+
+    return scheduleData
+}
+
 Date getGameTime(game) {
     def dateTime = null
     Date gameTime = null
@@ -284,6 +366,7 @@ def updateState(onInitialize = false) {
     def now = new Date()
     def lastGame = null
     def nextGame = null
+    def upcomingSchedule = []
     for (game in schedule) {
         def gameTime = getGameTime(game)
         def status = game.Status 
@@ -302,6 +385,7 @@ def updateState(onInitialize = false) {
                     nextGame = game
                 }
             }
+            if (gameTime.after(now) || status == "Scheduled") upcomingSchedule.add(game)
         }
         else if (gameTime != null) {
             // handle finished game
@@ -317,6 +401,7 @@ def updateState(onInitialize = false) {
 
     state.nextGame = getGameData(nextGame)
     state.lastGame = getGameData(lastGame)
+    state.schedule = getScheduleData(upcomingSchedule)
     setStandings()
     
     if (hasRecordChanged(storedRecord)) {
@@ -520,7 +605,8 @@ def updateDisplayedGame() {
     def game = getGameToDisplay()
     def switchValue = getSwitchValue()  
     def tile = getGameTile(game)
-    updateDevice([game: game, switchValue: switchValue, tile: tile])    
+    def scheduleTile = getScheduleTile()
+    updateDevice([game: game, switchValue: switchValue, tile: tile, scheduleTile: scheduleTile])    
 }
 
 def getDateOfNextDayOfWeek(startDate, nextDayOfWeek) {
@@ -612,7 +698,7 @@ def updateGameInProgress() {
             state.nextGame.progress = updatedGameData.progress
             state.nextGame.status = updatedGameData.status
         }
-        updateDevice([game: state.nextGame, switchValue: getSwitchValue(), tile: getGameTile(state.nextGame)])
+        updateDevice([game: state.nextGame, switchValue: getSwitchValue(), tile: getGameTile(state.nextGame), scheduleTile: getScheduleTile()])
         scheduleUpdate(true)
     }
 }
