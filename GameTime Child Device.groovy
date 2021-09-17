@@ -23,6 +23,7 @@
  *  v1.2.7 - Hide record when hide game spoilers
  *  v1.3.0 - Added option to designate team as Low Priority
  *  v1.3.1 - Fixed issue with NFL bye weeks
+ *  v1.4.0 - Added schedule attribute
 **/
 
 metadata
@@ -33,6 +34,7 @@ metadata
         capability "Switch"
         
         attribute "tile", "string" 
+        attribute "schedule", "string" 
         
         attribute "gameTime", "string"
         attribute "gameTimeStr", "string"
@@ -82,7 +84,7 @@ def configure()
     refresh()
 }
 
-def updateDevice(appID, data) {
+def updateDevice(appID, data, scheduleData = null) {
     state.appID = appID
     sendEvent(name: "gameTime", value: data.game != null ? data.game.gameTime : "No Game Data")
     sendEvent(name: "gameTimeStr", value: data.game != null ? data.game.gameTimeStr : "No Game Data")
@@ -90,6 +92,7 @@ def updateDevice(appID, data) {
     sendEvent(name: "opponent", value: data.game != null ? data.game.opponent.displayName : "No Game Data")
     
     sendEvent(name: "tile", value: data.tile)
+    sendEvent(name: "schedule", value: data.scheduleTile)
     sendEvent(name: "switch", value: data.switchValue)
 }
 
