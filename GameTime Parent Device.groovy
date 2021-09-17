@@ -23,6 +23,7 @@
  *  v1.2.7 - Hide record when hide game spoilers
  *  v1.3.0 - Added option to designate team as Low Priority
  *  v1.3.1 - Fixed issue with NFL bye weeks
+ *  v1.4.0 - Added schedule attribute
 **/
 
 metadata
@@ -33,6 +34,7 @@ metadata
         capability "Switch"
         
         attribute "tile", "string" 
+        attribute "schedule", "string" 
         
         attribute "gameTime", "string"
         attribute "gameTimeStr", "string"
@@ -87,15 +89,6 @@ def on() {
 
 def off() {
     sendEvent(name: "switch", value: "off")
-}
-
-def configureNextGame(data) {
-    sendEvent(name: "gameTime", value: data.gameTime)
-    sendEvent(name: "gameTimeStr", value: data.gameTimeStr)
-    sendEvent(name: "tile", value: data.tile)
-    sendEvent(name: "status", value: data.status)
-    sendEvent(name: "opponent", value: data.opponent)
-    sendEvent(name: "switch", value: data.switch)
 }
 
 def updateChildDevice(appID, data)
@@ -211,6 +204,7 @@ def clearParent() {
     sendEvent(name: "gameTime", value: "No Game Scheduled")
     sendEvent(name: "gameTimeStr", value: "No Game Scheduled")
     sendEvent(name: "tile", value: "<div style='overflow:auto;height:90%'></div>")
+    sendEvent(name: "schedule", value: "<div style='overflow:auto;height:90%'></div>")
     sendEvent(name: "status", value: "No Game Scheduled")
     sendEvent(name: "opponent", value: "No Game Scheduled")
     sendEvent(name: "switch", value: "off")    
@@ -220,6 +214,7 @@ def copyChild(child) {
     sendEvent(name: "gameTime", value: child.currentValue("gameTime"))
     sendEvent(name: "gameTimeStr", value: child.currentValue("gameTimeStr"))
     sendEvent(name: "tile", value: child.currentValue("tile"))
+    sendEvent(name: "schedule", value: child.currentValue("schedule"))
     sendEvent(name: "status", value: child.currentValue("status"))
     sendEvent(name: "opponent", value: child.currentValue("opponent"))
     sendEvent(name: "switch", value: child.currentValue("switch"))    
