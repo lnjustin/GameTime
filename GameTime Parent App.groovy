@@ -25,6 +25,7 @@
  *  v1.3.1 - Fixed issue with NFL bye weeks
  *  v1.4.0 - Added schedule attribute
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
+ *  v1.4.2 - Bug fix with college schedule tile
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
