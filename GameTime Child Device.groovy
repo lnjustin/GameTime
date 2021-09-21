@@ -24,6 +24,7 @@
  *  v1.3.0 - Added option to designate team as Low Priority
  *  v1.3.1 - Fixed issue with NFL bye weeks
  *  v1.4.0 - Added schedule attribute
+ *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
 **/
 
 metadata
@@ -48,7 +49,6 @@ preferences
 {
     section
     {
-        input name: "parentID", type: "string", title: "Parent App ID"
         input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
 }
