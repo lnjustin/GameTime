@@ -23,6 +23,8 @@
  *  v1.2.7 - Hide record when hide game spoilers
  *  v1.3.0 - Added option to designate team as Low Priority
  *  v1.3.1 - Fixed issue with NFL bye weeks
+ *  v1.4.0 - Added schedule attribute
+ *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -52,6 +54,22 @@ preferences {
 @Field leagues = ["College Football", "Men's College Basketball", "Women's College Basketball"]
 @Field api = ["College Football":"cfb", "Men's College Basketball":"cbb", "Women's College Basketball":"wcbb"]
 
+mappings
+{
+    path("/gametime/:appId") { action: [ GET: "fetchSchedule"] }
+}
+
+def getScheduleEndpoint() {
+    return getFullApiServerUrl() + "/gametime/${app.id}?access_token=${state.accessToken}"    
+}
+
+def instantiateToken() {
+     if(!state.accessToken){	
+         //enable OAuth in the app settings or this call will fail
+         createAccessToken()	
+     }   
+}
+
 def mainPage() {
     dynamicPage(name: "mainPage") {
        
@@ -77,7 +95,7 @@ def mainPage() {
                 if (team) {
                     input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
                     input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
-                    paragraph getInterface("note", "A low priority team will only display on the 'all teams' GameTime device if no higher priority team has a game within X hours. The Low Priority Team Hour Threshold specifies X.") 
+                    paragraph getInterface("note", "A low priority team will only display on the 'all teams' GameTime device if no higher priority team has a game within X hours. The Low Priority Team Hour Threshold specifies X. If you change the priority status of a team after install, you must go to the parent app and click DONE in order for the prioritzation change to have immediate effect.") 
                 }
                 input("clearStateBetweenUpdate", "bool", title: "Clear teams data between updates?", defaultValue: true, required: false)
                 paragraph getInterface("note", "Enabling Clear 'Teams Data Between Updates' reduces state size. Disabling conserves API calls.")
@@ -112,6 +130,18 @@ def getFontSizeSetting() {
 
 def getHideGameResultSetting() {
     return hideGameResult ? hideGameResult : false
+}
+
+def getScheduleFontSizeSetting() {
+    return parent.getScheduleTileFontSize()
+}
+
+def getScheduleTextColorSetting(oddOrEven) {
+    return parent.getScheduleTileTextColor(oddOrEven)
+}
+
+def getScheduleBackgroundColorSetting(oddOrEven) {
+    return parent.getScheduleTileBackgroundColor(oddOrEven)
 }
 
 def getTextColorSetting() {
@@ -239,26 +269,79 @@ def update(onInitialize = false) {
     scheduleUpdate()
 }
 
+/*
+Old schedule tile 
 def getScheduleTile() {  
     logDebug("Getting schedule tile for ${state.team.displayName}")
     def scheduleTile = "<div style='overflow:auto;height:90%'></div>"
-    def textColor = getTextColorSetting()
-    def fontSize = getFontSizeSetting()
-    def colorStyle = ""
-    if (textColor != "#000000") colorStyle = "color:" + textColor
+    def oddTextColor = getScheduleTextColorSetting("odd")
+    def oddBackgroundColor = getScheduleBackgroundColorSetting("odd")
+    def evenTextColor = getScheduleTextColorSetting("even")
+    def evenBackgroundColor = getScheduleBackgroundColorSetting("even")
+    def fontSize = getScheduleFontSizeSetting()
     if (state.schedule != null) {
-        scheduleTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;${colorStyle};'><table width='100%' style='border-collapse: collapse'>"
+        scheduleTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;;'><table width='100%' style='border-collapse: collapse'>"
         def numRows = 0
+        def numGames = state.schedule.size()
         for (game in state.schedule) {
-            scheduleTile += "<tr${numRows % 2 == 1 ? " style='background-color:#F5F5F5'": null}><td width='30%' style='padding:0;margin:0' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
-            scheduleTile += "<td width='40%' style='padding:0;margin:0' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='20%'> ${game.opponent}</td>"
-            scheduleTile += "<td width='30%' style='padding:0;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
+            def backgroundColor = numRows % 2 == 0 ? evenBackgroundColor : oddBackgroundColor
+            def textColor = numRows % 2 == 0 ? evenTextColor : oddTextColor
+            scheduleTile += "<tr height='${100/numGames}%' style='background-color:${backgroundColor}; color: ${textColor}'><td width='25%' style='padding:0;margin:0' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
+            scheduleTile += "<td width='50%' style='padding:0;margin:0' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='20%'> ${game.opponent}</td>"
+            scheduleTile += "<td width='25%' style='padding:0;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
             numRows++
         }
         scheduleTile += "</table></div>"  
     }    
     return scheduleTile
 }
+*/
+
+def getScheduleTile() {  
+    logDebug("Getting schedule tile for ${state.team.displayName}")
+    if (!state.refreshNum) state.refreshNum = 0
+    state.refreshNum++
+    def scheduleUrl = getScheduleEndpoint() + '&version=' + state.refreshNum   
+        
+    def scheduleTile = '<div style="width:100%;position:relative; z-index:0; text-align: center;">'
+    scheduleTile +=     '<div style="width: 100%; height: 100%; z-index:1;text-align: center;">'
+    scheduleTile +=     '<object width=100% data="' + scheduleUrl + '"> Your browser doesn’t support the object tag. </object>'
+    scheduleTile +=     '</div>'
+    scheduleTile += '</div>'
+    return scheduleTile
+}
+
+def fetchSchedule() {
+    logDebug("Fetching Schedule")
+    if(params.appId.toInteger() != app.id) {
+        logDebug("Returning null since app ID received at endpoint is ${params.appId.toInteger()} whereas the app ID of this app is ${app.id}")
+        return null    // request was not for this app/team, so return null
+    }
+    
+    def scheduleTile = "<div style='height:100%'></div>"
+    def oddTextColor = getScheduleTextColorSetting("odd")
+    def oddBackgroundColor = getScheduleBackgroundColorSetting("odd")
+    def evenTextColor = getScheduleTextColorSetting("even")
+    def evenBackgroundColor = getScheduleBackgroundColorSetting("even")
+    def fontSize = getScheduleFontSizeSetting()
+    if (state.schedule != null) {
+        scheduleTile = "<div style='height:100%;font-size:${fontSize}%;;'><table width='100%' style='border-collapse: collapse'>"
+        def numRows = 0
+        def numGames = state.schedule.size()
+        for (game in state.schedule) {
+            def backgroundColor = numRows % 2 == 0 ? evenBackgroundColor : oddBackgroundColor
+            def textColor = numRows % 2 == 0 ? evenTextColor : oddTextColor
+            scheduleTile += "<tr width='100%' height='${100/numGames}%' style='background-color:${backgroundColor}; color: ${textColor}'><td width='25%' style='margin:0; padding:4' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
+            scheduleTile += "<td width='100%' style='padding:4;display:flex; align-items:center; justify-content: center;' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='15%' style='padding:4'> ${game.opponent}</td>"
+            scheduleTile += "<td width='25%' style='padding:4;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
+            numRows++
+        }
+        scheduleTile += "</table></div>" 
+    }
+    logDebug("Calling render on ${scheduleTile}")
+    render contentType: "text/html", data: scheduleTile, status: 200
+}
+
 
 String getGameDate(gameTime) {
     Date gameTimeDateObj = new Date(gameTime)
@@ -311,7 +394,9 @@ def getScheduleData(upcomingSchedule) {
     }
 
     scheduleData = scheduleData.sort {it.gameTime}
-    scheduleData = scheduleData.subList(0, getNumGamesForScheduleSetting())
+    def maxNumGames = getNumGamesForScheduleSetting()
+    def subListIndex = maxNumGames < scheduleData.size() ? maxNumGames : scheduleData.size()
+    scheduleData = scheduleData.subList(0, subListIndex)
 
     return scheduleData
 }
