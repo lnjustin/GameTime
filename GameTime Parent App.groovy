@@ -24,6 +24,7 @@
  *  v1.3.0 - Added option to designate team as Low Priority
  *  v1.3.1 - Fixed issue with NFL bye weeks
  *  v1.4.0 - Added schedule attribute
+ *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -62,14 +63,23 @@ def mainPage() {
                         paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
                     }
                 }
-                section (getInterface("header", " Tile Settings")) {
+                section (getInterface("header", " Game Tile Settings")) {
                     input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                     input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                     input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                    input(name:"fontSize", type: "number", title: "Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                    input("textColor", "text", title: "Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
+                    input(name:"fontSize", type: "number", title: "Game Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
+                    input("textColor", "text", title: "Game Tile Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
                     input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
                     input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
+                }
+                section (getInterface("header", " Schedule Tile Settings")) {
+                    input(name:"scheduleFontSize", type: "number", title: "Schedule Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
+                    input(name:"oddRowBackgroundColor", type: "text", title: "Background Color (Hex) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: '#FFFFFF')
+                    input(name:"oddRowOpacity", type: "number", title: "Opacity (0.0 to 1.0) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 0)
+                    input("oddRowTextColor", "text", title: "Text Color (Hex) for Odd Rows of Schedule Tile", defaultValue: '#000000', displayDuringSetup: false, required: false)   
+                    input(name:"evenRowBackgroundColor", type: "text", title: "Background Color (Hex) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: '#9E9E9E')
+                    input(name:"evenRowOpacity", type: "number", title: "Opacity (0.0 to 1.0) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 1)
+                    input("evenRowTextColor", "text", title: "Text Color (Hex) for Even Rows of Schedule Tile", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false)                      
                 }
 			    section (getInterface("header", " General Settings")) {
                     input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
@@ -80,6 +90,48 @@ def mainPage() {
                 footer()
             }
     }
+}
+
+ public static getRGB(String hex)
+{
+    def rgb = []
+    for (int i = 0; i < 3; i++)
+    {
+        rgb[i] = (Integer.parseInt(hex.substring(i * 2 + 1, i * 2 + 3), 16)).toString()
+    }
+    return rgb
+}
+
+def getScheduleTileTextColor(oddOrEven) {
+    def color = null
+    if (oddOrEven == "odd") {
+         color = (oddRowTextColor) ? oddRowTextColor : '#000000'
+    }
+    else if (oddOrEven == "even") {
+        color = (evenRowTextColor) ? evenRowTextColor : '#FFFFFF'
+    }
+    return color
+}
+
+def getScheduleTileFontSize() {
+    return scheduleFontSize != null ? scheduleFontSize : 100
+}
+
+def getScheduleTileBackgroundColor(oddOrEven) {
+    def color = null
+    def hex = null
+    def op = null
+    if (oddOrEven == "odd") {
+         hex = (oddRowBackgroundColor) ? oddRowBackgroundColor : '#FFFFFF'
+         op = oddRowOpacity ? oddRowOpacity : 0
+    }
+    else if (oddOrEven == "even") {
+        hex = (evenRowBackgroundColor) ? evenRowBackgroundColor : '#9E9E9E'
+         op = evenRowOpacity ? evenRowOpacity : 1 
+    }
+    def rgb = getRGB(hex)
+    def opacity = op.toString()
+    return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + opacity + ")"    
 }
 
 def getTextColorSetting() {
