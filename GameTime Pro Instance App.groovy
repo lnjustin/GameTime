@@ -26,6 +26,7 @@
  *  v1.4.0 - Added schedule attribute
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  *  v1.4.2 - Bug fix with college schedule tile
+ *  v1.4.3 - Improved schedule tile display
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -356,11 +357,11 @@ def getScheduleTile() {
     state.refreshNum++
     def scheduleUrl = getScheduleEndpoint() + '&version=' + state.refreshNum   
         
-    def scheduleTile = '<div style="width:100%;position:relative; z-index:0; text-align: center;">'
-    scheduleTile +=     '<div style="width: 100%; height: 100%; z-index:1;text-align: center;">'
-    scheduleTile +=     '<object width=100% data="' + scheduleUrl + '"> Your browser doesn’t support the object tag. </object>'
-    scheduleTile +=     '</div>'
-    scheduleTile += '</div>'
+  //  def scheduleTile = '<div style="width:100%;position:relative; z-index:0; text-align: center;">'
+  //  scheduleTile +=     '<div style="width: 100%; height: 100%; z-index:1;text-align: center;">'
+    def scheduleTile =     "<div style='height:100%;width:100%'><iframe src='${scheduleUrl}' style='height:100%;width:100%;border:none'></iframe></div>"
+  //  scheduleTile +=     '</div>'
+  //  scheduleTile += '</div>'
     return scheduleTile
 }
 
@@ -385,7 +386,7 @@ def fetchSchedule() {
             def backgroundColor = numRows % 2 == 0 ? evenBackgroundColor : oddBackgroundColor
             def textColor = numRows % 2 == 0 ? evenTextColor : oddTextColor
             scheduleTile += "<tr width='100%' height='${100/numGames}%' style='background-color:${backgroundColor}; color: ${textColor}'><td width='25%' style='margin:0; padding:4' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
-            scheduleTile += "<td width='100%' style='padding:4;display:flex; align-items:center; justify-content: center;' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='15%' style='padding:4'> ${game.opponent}</td>"
+            scheduleTile += "<td width='100%' style='padding:4;display:flex; align-items:center; justify-content: center;' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' height='" + 25*(fontSize/100) + "vh' style='padding:4'> ${game.opponent}</td>"
             scheduleTile += "<td width='25%' style='padding:4;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
             numRows++
         }
