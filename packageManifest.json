@@ -20,7 +20,7 @@
       "namespace": "lnjustin",
       "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20College%20Instance%20App.groovy",
       "required": true,
-      "oauth": false,
+      "oauth": true,
       "primary": false
     },
     {
@@ -29,7 +29,7 @@
       "namespace": "lnjustin",
       "location": "https://raw.githubusercontent.com/lnjustin/GameTime/main/GameTime%20Pro%20Instance%20App.groovy",
       "required": true,
-      "oauth": false,
+      "oauth": true,
       "primary": false
     }
   ],
