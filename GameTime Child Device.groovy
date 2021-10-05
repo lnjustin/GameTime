@@ -27,6 +27,7 @@
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
+ *  v1.5.0 - Improved api key input, added event notifications
 **/
 
 metadata
@@ -35,6 +36,7 @@ metadata
     {
         capability "Actuator"
         capability "Switch"
+        capability "PushableButton"
         
         attribute "tile", "string" 
         attribute "schedule", "string" 
@@ -96,6 +98,10 @@ def updateDevice(appID, data, scheduleData = null) {
     sendEvent(name: "tile", value: data.tile)
     sendEvent(name: "schedule", value: data.scheduleTile)
     sendEvent(name: "switch", value: data.switchValue)
+}
+
+def pushButton(buttonNum) {
+    sendEvent(name: "pushed", value: buttonNum, isStateChange: true)
 }
 
 def getDeviceData() {
