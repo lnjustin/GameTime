@@ -27,6 +27,7 @@
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
+ *  v1.5.0 - Improved api key input, added event notifications
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -74,20 +75,44 @@ preferences {
 def mainPage() {
     dynamicPage(name: "mainPage") {
        
+            
+            def key = getAPIKey()
             section {
               //  header()                
                 paragraph getInterface("header", " GameTime Professional Instance")
                 paragraph getInterface("note", "After selecting the league and your team, click DONE. This will create a device for the selected team, listed under the GameTime parent device.")
                 input(name:"league", type: "enum", title: "Professional Sports League", options: leagues, required:true, submitOnChange:true)
-                if(!apiKey && league) {
-                    input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
+                
+                if(!key && league) {
+                    def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
+                    def inputTitle = link + " for ${league}"
+                    input(name:"apiKey", type: "text", title: inputTitle, required:true, submitOnChange:true)
                 }
-                else if (apiKey && league) {
+                else if (key && league) {
                     if (!state.season) setSeason()
                     if (!state.teams) setTeams()
                     input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true, submitOnChange:true)
                 }
                 
+            }
+            if (team) {
+                section (getInterface("header", " Event Handling")) {  
+                    paragraph getInterface("subHeader", " First Pre-Game Event")
+                    paragraph getInterface("note", "Button 1 will be pushed upon the first pre-game event.") 
+                    input name: "firstEventAdvance", type: "number", title: "First Pre-Game Event Occurs How Many Minutes Before GameTime?", defaultValue: 60
+                    input name: "isFirstEventNotify", title:"Send Push Notification?", type:"bool", required:false, submitOnChange:false, defaultValue: false
+                    paragraph getInterface("subHeader", " Second Pre-Game Event")
+                    paragraph getInterface("note", "Button 2 will be pushed upon the second pre-game event.") 
+                    input name: "secondEventAdvance", type: "number", title: "Second Pre-Game Event Occurs How Many Minutes Before GameTime?", defaultValue: 0
+                    input name: "isSecondEventNotify", title:"Send Push Notification?", type:"bool", required:false, submitOnChange:false, defaultValue: false
+                    paragraph getInterface("subHeader", " Win Event")
+                    paragraph getInterface("note", "Button 3 will be pushed upon a win.") 
+                    input name: "isWinEventNotify", title:"Send Push Notification?", type:"bool", required:false, submitOnChange:false, defaultValue: false
+                    paragraph getInterface("subHeader", " Loss Event")
+                    paragraph getInterface("note", "Button 4 will be pushed upon a loss.")
+                    input name: "isLossEventNotify", title:"Send Push Notification?", type:"bool", required:false, submitOnChange:false, defaultValue: false
+                    input name: "notificationDevices", type: "capability.notification", title: "Devices to Notify", required: false, multiple: true, submitOnChange: false
+                }
             }
             section (getInterface("header", " Settings")) {                
                 if (team) {
@@ -98,7 +123,11 @@ def mainPage() {
                     input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
                     label title: "GameTime Instance Name", required:false, submitOnChange:true
                 }
-                if (apiKey && league) input(name:"apiKey", type: "text", title: "SportsData.IO API Key for ${league}", required:true, submitOnChange:true)
+                if (key && league) {
+                    def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
+                    def inputTitle = link + " for ${league}"
+                    input(name:"apiKey", type: "text", title: inputTitle, required:false, submitOnChange:true, defaultValue: key)
+                }
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		    }
             section("") {
@@ -108,8 +137,29 @@ def mainPage() {
     }
 }
 
+def getLeagueAPIKey(forLeague) {
+    def key = null
+    if (league == forLeague) key = apiKey
+    return key
+}
+                         
+def getAPIKey() {
+    def key = null
+    if (apiKey) key = apiKey
+    else if (league != null) key = parent.getLeagueAPIKey(app.id, league)
+    return key
+}
+
 Integer getNumGamesForScheduleSetting() {
     return numGamesForSchedule != null ? (int) numGamesForSchedule : 3
+}
+
+Integer getFirstEventAdvanceSetting() {
+    return firstEventAdvance != null ? (int) firstEventAdvance : 60
+}
+
+Integer getSecondEventAdvanceSetting() {
+    return secondEventAdvance != null ? (int) secondEventAdvance : 0
 }
 
 def getLowPriorityThresholdSetting() {
@@ -181,15 +231,16 @@ def uninstalled() {
 
 def initialize() {
     instantiateToken()
-    if (league && team && apiKey) {
+    def key = getAPIKey()
+    if (league && team && key) {
         setSeason()
         setTeams()
         setStandings()
         setMyTeam()
         createChild()        
         update(true)
-        schedule("01 00 00 ? * *", setSeason)
-        schedule("15 00 00 ? * *", scheduledUpdate)
+        schedule("01 01 00 ? * *", setSeason)
+        schedule("15 01 00 ? * *", scheduledUpdate)
     }
     else log.error "Missing input fields."
 }
@@ -323,45 +374,13 @@ def getScheduleData(upcomingSchedule) {
 }
 
 
-/*
-Old schedule tile 
-
-def getScheduleTile() {  
-    logDebug("Getting schedule tile for ${state.team.displayName}")
-    def scheduleTile = "<div style='height:90%'></div>"
-    def oddTextColor = getScheduleTextColorSetting("odd")
-    def oddBackgroundColor = getScheduleBackgroundColorSetting("odd")
-    def evenTextColor = getScheduleTextColorSetting("even")
-    def evenBackgroundColor = getScheduleBackgroundColorSetting("even")
-    def fontSize = getScheduleFontSizeSetting()
-    if (state.schedule != null) {
-        scheduleTile = "<div style='height:90%;font-size:${fontSize}%;;'><table width='100%' style='border-collapse: collapse'>"
-        def numRows = 0
-        def numGames = state.schedule.size()
-        for (game in state.schedule) {
-            def backgroundColor = numRows % 2 == 0 ? evenBackgroundColor : oddBackgroundColor
-            def textColor = numRows % 2 == 0 ? evenTextColor : oddTextColor
-            scheduleTile += "<tr height='${100/numGames}%' style='background-color:${backgroundColor}; color: ${textColor}'><td width='25%' style='margin:0' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
-            scheduleTile += "<td width='50%' style='padding:0;margin:0' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' width='20%'> ${game.opponent}</td>"
-            scheduleTile += "<td width='25%' style='padding:0;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
-            numRows++
-        }
-        scheduleTile += "</table></div>"  
-    }    
-    return scheduleTile
-*/
-
 def getScheduleTile() {  
     logDebug("Getting schedule tile for ${state.team.displayName}")
     if (!state.refreshNum) state.refreshNum = 0
     state.refreshNum++
     def scheduleUrl = getScheduleEndpoint() + '&version=' + state.refreshNum   
         
-  //  def scheduleTile = '<div style="width:100%;position:relative; z-index:0; text-align: center;">'
-  //  scheduleTile +=     '<div style="width: 100%; height: 100%; z-index:1;text-align: center;">'
     def scheduleTile =     "<div style='height:100%;width:100%'><iframe src='${scheduleUrl}' style='height:100%;width:100%;border:none'></iframe></div>"
-  //  scheduleTile +=     '</div>'
-  //  scheduleTile += '</div>'
     return scheduleTile
 }
 
@@ -464,7 +483,8 @@ def updateState(onInitialize = false) {
        
     setStandings()
     
-    if (hasRecordChanged(storedRecord)) {
+    def hasRecordChanged = hasRecordChanged(storedRecord)
+    if (hasRecordChanged) {
         logDebug("Team Record has changed. Setting last record to ${storedRecord} for determining the result of the last game.")
         state.lastRecord = [wins: storedRecord.wins, losses: storedRecord.losses, overtimeLosses: storedRecord.overtimeLosses, ties: storedRecord.ties, asOf: now.getTime()]   
     }
@@ -483,6 +503,8 @@ def updateState(onInitialize = false) {
         def lastGameResult = getLastGameResult(onInitialize)
         // TO DO: build in a safeguard to make sure status is only set to result if the last game's status was F, F/OT, or F/SO (not canceled, etc.)
         if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
+        if (hasRecordChanged && lastGameResult == "Won") handleWinEvent(state.lastGame.opponent.displayName)
+        else if (hasRecordChanged && lastGameResult == "Lost") handleLossEvent(state.lastGame.opponent.displayName)
     }
     
     Date dateToUpdateDisplay = getDateToSwitchFromLastToNextGame()
@@ -505,12 +527,15 @@ def updateRecord(onDemand = false) {
     if (update == true) {
         def storedRecord = getRecord(state.team)
         setStandings()
-        if (hasRecordChanged(storedRecord)) {
+        def hasRecordChanged = hasRecordChanged(storedRecord)
+        if (hasRecordChanged) {
             state.lastRecord = [wins: storedRecord.wins, losses: storedRecord.losses, overtimeLosses: storedRecord.overtimeLosses, ties: storedRecord.ties, asOf: (new Date()).getTime()]  
         }
         else logDebug("Team Record has not changed. No update to state.lastRecord made.")
         def lastGameResult = getLastGameResult(onDemand)
         if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
+        if (hasRecordChanged && lastGameResult == "Won") handleWinEvent(state.lastGame.opponent.displayName)
+        else if (hasRecordChanged && lastGameResult == "Lost") handleLossEvent(state.lastGame.opponent.displayName)
         updateDisplayedGame()
     }
 }
@@ -586,8 +611,24 @@ def getLastGameResult(suppressRetry = false) {
         warning += " Last Record is wins: ${state.lastRecord.wins} losses: ${state.lastRecord.losses}${league == "NFL" ? " ties: " + state.lastRecord.ties : ""}${league == "NHL" ? " OT losses: " + state.lastRecord.overtimeLosses : ""}. Current Record is wins: ${currentRecord.wins} losses: ${currentRecord.losses}${league == "NFL" ? " ties: " + currentRecord.ties : ""}${league == "NHL" ? " OT losses: " + currentRecord.overtimeLosses : ""}."
         logDebug(warning)
     }          
-    else logDebug("Determined last game result: ${result}")
+    else {
+        logDebug("Determined last game result: ${result}")
+    }
     return result
+}
+
+def handleWinEvent(opponent) {
+    pushDeviceButton(3)
+    if (isWinEventNotify == true && notificationDevices != null) {          
+        notificationDevices.deviceNotification("Victory! ${state.team.displayName} win over the ${opponent}!") 
+    }
+}
+
+def handleLossEvent(opponent) {
+    pushDeviceButton(4)
+    if (isLossEventNotify == true && notificationDevices != null) {          
+        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} lose to the ${opponent}.") 
+    }    
 }
 
 def getGameData(game) {
@@ -784,6 +825,38 @@ def getGameToDisplay() {
     return game
 }
 
+def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
+    if (minsLeft == 0) {
+        notificationDevices.deviceNotification("Gametime! ${myTeam} play the ${opponent}. ${timeStr}.")           
+    }
+    else {
+        def hours = (minsLeft / 60).intValue()
+        def hourStr = ""
+        if (hours == 1) hourStr = hours + " hour"
+        else if (hours > 1) hourStr = hours + " hours"
+        def mins = (minsLeft % 60).intValue()
+        def minStr = ""
+        if (mins == 1) minStr = mins + " minute"
+        else if (mins > 1) minStr = mins + " minutes"
+        def timeLeft = (hourStr == "") ? minStr : hourStr + " " + minStr
+        notificationDevices.deviceNotification("The ${myTeam} play the ${opponent} in ${timeLeft}. Game starts ${timeStr}.")
+    }    
+}
+
+def handleFirstPreGameEvent(data) {
+    pushDeviceButton(1)
+    if (isFirstEventNotify == true && notificationDevices != null) {          
+        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getFirstEventAdvanceSetting())
+    }
+}
+
+def handleSecondPreGameEvent(data) {
+    pushDeviceButton(2)
+    if (isSecondEventNotify == true && notificationDevices != null) {
+        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getSecondEventAdvanceSetting())
+    }
+}
+
 def scheduleUpdate(Boolean updatingGameInProgress=false) {    
     if (state.nextGame) {
         def nextGameTime = new Date(state.nextGame.gameTime)
@@ -799,6 +872,15 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
             }
             runOnce(delayedGameTime, updateGameInProgress)
         
+            // Schedule First Pre-Game Event
+            def firstEventSecsAdvance = getFirstEventAdvanceSetting()*60*-1
+            Date firstEvent = adjustDateBySecs(nextGameTime, firstEventSecsAdvance)
+            runOnce(firstEvent, handleFirstPreGameEvent, [data: [opponent: state.nextGame.opponent.displayName, gameTimeStr: state.nextGame.gameTimeStr]])
+            
+            // Schedule Second Pre-Game Event
+            def secondEventSecsAdvance = getSecondEventAdvanceSetting()*60*-1
+            Date secondEvent = adjustDateBySecs(nextGameTime, secondEventSecsAdvance)
+            runOnce(secondEvent, handleSecondPreGameEvent, [data: [opponent: state.nextGame.opponent.displayName, gameTimeStr: state.nextGame.gameTimeStr]])
         }
         else if (state.nextGame.status == "InProgress") {
             // update in progress game no matter whether game started today or not, since late night game will progress into the next day
@@ -939,6 +1021,10 @@ def updateDevice(data) {
     parent.updateChildDevice(app.id, data)
 }
 
+def pushDeviceButton(buttonNum) {
+    parent.pushDeviceButton(app.id, buttonNum)
+}
+
 def getTeamOptions() {
     def teamOptions = []
     state.teams.each { key, tm ->
@@ -1072,7 +1158,7 @@ def sendApiRequest(path)
         path: "v3/" + api[league] + path,
 		contentType: "application/json",
 		query: [
-                key: apiKey,
+                key: getAPIKey(),
             ],
 		timeout: 1000
 	]
@@ -1109,6 +1195,15 @@ def getSecondsBetweenDates(Date startDate, Date endDate) {
         log.error "getSecondsBetweenDates Exception: ${ex}"
         return 1000
     }
+}
+
+def adjustDateBySecs(Date date, Integer secs) {
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(location.timeZone)
+    cal.setTime(date)
+    cal.add(Calendar.SECOND, secs)
+    Date newDate = cal.getTime()
+    return newDate
 }
 
 def getOrdinal(num) {
