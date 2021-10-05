@@ -27,6 +27,7 @@
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
+ *  v1.5.0 - Improved api key input, added event notifications
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -185,6 +186,17 @@ def initialize() {
     }
 }
 
+def getLeagueAPIKey(forAppID, forLeague) {
+    def leagueKey = null
+    childApps.each { child ->
+        if (child.id != forAppID) {
+            def childKey = child.getLeagueAPIKey(forLeague)               
+            if (childKey != null) leagueKey = childKey
+        }
+    }    
+    return leagueKey
+}
+
 def updateLastGameResult(appID) {
     childApps.each { child ->
         if (child.id == appID) {
@@ -262,6 +274,14 @@ def updateChildDevice(appID, data) {
         parent.updateChildDevice(appID, data)
     }
     else log.error "No Parent Device Found."
+}
+
+def pushDeviceButton(appID, buttonNum) {
+    def parent = getChildDevice("GameTimeParentDevice${app.id}")
+    if (parent) {
+        parent.pushChildDeviceButton(appID, buttonNum)
+    }
+    else log.error "No Parent Device Found."    
 }
 
 def logDebug(msg) {
