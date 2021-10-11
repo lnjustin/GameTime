@@ -27,6 +27,7 @@
  *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
+ *  v1.5.0 - Improved api key input, added event notifications
 **/
 
 metadata
@@ -101,6 +102,14 @@ def updateChildDevice(appID, data)
         runIn(5, "updateParentDevice")
     }
     else log.error "No Child Device for app ${appID} found"
+}
+
+def pushChildDeviceButton(appID, buttonNum) {
+    def child = getChildDevice("GameTimeChildDevice${appID}")
+    if (child) {
+        child.pushButton(buttonNum)
+    }
+    else log.error "No Child Device for app ${appID} found"    
 }
 
 def anyHighPriorityGameNear(lowPriorityChild, children) {
