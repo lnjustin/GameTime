@@ -696,15 +696,17 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         def nextGameTime = new Date(state.nextGame.gameTime)
         def now = new Date()
         
-        if (state.nextGame.status == "Scheduled" && (nextGameTime.after(now) || nextGameTime.equals(now)) && isToday(nextGameTime)) {
-            // if game starts later today, update shortly after gametime
-            // only need to schedule update if game is today. If game is tomorrow, update will happen at midnight anyway
-            def delayedGameTime = null
-            // update game after the 10 minute delay from SportsData.IO
-            use(TimeCategory ) {
-                delayedGameTime = nextGameTime + 11.minutes
+        if (state.nextGame.status == "Scheduled" && (nextGameTime.after(now) || nextGameTime.equals(now))) {
+            if (isToday(nextGameTime)) {
+                // if game starts later today, update shortly after gametime
+               // only need to schedule update if game is today. If game is tomorrow, update will happen at midnight anyway
+                def delayedGameTime = null
+                // update game after the 10 minute delay from SportsData.IO
+                use(TimeCategory ) {
+                    delayedGameTime = nextGameTime + 11.minutes
+                }
+                runOnce(delayedGameTime, updateGameInProgress)
             }
-            runOnce(delayedGameTime, updateGameInProgress)
             
             // Schedule First Pre-Game Event
             def firstEventSecsAdvance = getFirstEventAdvanceSetting()*60*-1
