@@ -28,6 +28,7 @@
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
  *  v1.5.0 - Improved api key input, added event notifications
+ *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -71,18 +72,18 @@ def mainPage() {
                     input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                     input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
                     input(name:"fontSize", type: "number", title: "Game Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                    input("textColor", "text", title: "Game Tile Text Color (Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false)
+                    input("textColor", "text", title: "Game Tile Text Color (Hex format with leading #)", defaultValue: '#000000', displayDuringSetup: false, required: false)
                     input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
                     input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
                 }
                 section (getInterface("header", " Schedule Tile Settings")) {
                     input(name:"scheduleFontSize", type: "number", title: "Schedule Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                    input(name:"oddRowBackgroundColor", type: "text", title: "Background Color (Hex) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: '#FFFFFF')
-                    input(name:"oddRowOpacity", type: "number", title: "Opacity (0.0 to 1.0) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 0)
-                    input("oddRowTextColor", "text", title: "Text Color (Hex) for Odd Rows of Schedule Tile", defaultValue: '#000000', displayDuringSetup: false, required: false)   
-                    input(name:"evenRowBackgroundColor", type: "text", title: "Background Color (Hex) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: '#9E9E9E')
-                    input(name:"evenRowOpacity", type: "number", title: "Opacity (0.0 to 1.0) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 1)
-                    input("evenRowTextColor", "text", title: "Text Color (Hex) for Even Rows of Schedule Tile", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false)                      
+                    input(name:"oddRowBackgroundColor", type: "text", title: "Background Color for Odd Rows of Schedule Tile (Hex format with leading #)", required:true, submitOnChange:true, defaultValue: '#FFFFFF')
+                    input(name:"oddRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 0)
+                    input("oddRowTextColor", "text", title: "Text Color for Odd Rows of Schedule Tile (Hex format with leading #)", defaultValue: '#000000', displayDuringSetup: false, required: false)   
+                    input(name:"evenRowBackgroundColor", type: "text", title: "Background Color for Even Rows of Schedule Tile (Hex format with leading #)", required:true, submitOnChange:true, defaultValue: '#9E9E9E')
+                    input(name:"evenRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 1)
+                    input("evenRowTextColor", "text", title: "Text Color for Even Rows of Schedule Tile (Hex format with leading #)", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false)                      
                 }
 			    section (getInterface("header", " General Settings")) {
                     input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
