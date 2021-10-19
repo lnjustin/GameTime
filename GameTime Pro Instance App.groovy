@@ -28,6 +28,7 @@
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
  *  v1.5.0 - Improved api key input, added event notifications
+ *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -858,6 +859,11 @@ def handleSecondPreGameEvent(data) {
 }
 
 def scheduleUpdate(Boolean updatingGameInProgress=false) {    
+    
+    // unschedule pregame events in case the next game has been cancelled since having scheduled those pregame events
+    unschedule(handleFirstPreGameEvent)
+    unschedule(handleSecondPreGameEvent)
+    
     if (state.nextGame) {
         def nextGameTime = new Date(state.nextGame.gameTime)
         def now = new Date()
