@@ -1,9 +1,9 @@
 {
   "packageName": "GameTime",
   "author": "Justin Leonard",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "minimumHEVersion": "1.2.7",
-  "dateReleased": "2021-09-21",
+  "dateReleased": "2021-10-19",
   "apps": [
     {
       "id": "d544ee56-99e2-4a62-aed1-f197d5ce4cba",
