@@ -28,6 +28,7 @@
  *  v1.4.2 - Bug fix with college schedule tile
  *  v1.4.3 - Improved schedule tile display
  *  v1.5.0 - Improved api key input, added event notifications
+ *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
 **/
 
 metadata
