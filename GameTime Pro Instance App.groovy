@@ -29,6 +29,7 @@
  *  v1.4.3 - Improved schedule tile display
  *  v1.5.0 - Improved api key input, added event notifications
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
+ *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -254,10 +255,12 @@ def scheduledUpdate()
 
 def isToday(Date date) {
     def isToday = false
-    def today = new Date().clearTime()
-    def dateCopy = new Date(date.getTime())
-    def dateObj = dateCopy.clearTime()
-    if (dateObj.equals(today)) isToday = true
+    if (date != null) {
+        def today = new Date().clearTime()
+        def dateCopy = new Date(date.getTime())
+        def dateObj = dateCopy.clearTime()
+        if (dateObj.equals(today)) isToday = true
+    }
     return isToday
 }
 
@@ -782,12 +785,17 @@ def getNumDaysLaterAtTime(startDate, numDaysLater, atHour, atMinutes) {
 }
 
 Date getDateToSwitchFromLastToNextGame() {
-    if (!state.lastGame || !state.nextGame) return null
+    if (!state.lastGame) return null
     def lastGameTime = new Date(state.lastGame.gameTime)
-    def nextGameTime = new Date(state.nextGame.gameTime)
+    def nextGameTime = null
+    if (state.nextGame != null) nextGameTime = new Date(state.nextGame.gameTime)
     def now = new Date()
     Date date = null
-    if (league == "NFL") {
+    if (nextGameTime == null && lastGameTime != null) {
+        // if there is no next game, stop displaying the last game at 9AM the morning after the last game
+        date = getNumDaysLaterAtTime(lastGameTime, 1, 9, 0)  
+    }
+    else if (league == "NFL") {
         // switch to display next game on Wednesday
         date = getDateOfNextDayOfWeek(lastGameTime, Calendar.WEDNESDAY)        
     }
@@ -819,7 +827,7 @@ def getGameToDisplay() {
         else {
             def now = new Date()        
             Date updateAtDate = getDateToSwitchFromLastToNextGame()
-            if (now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
+            if (updateAtDate != null && now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
             else game = state.lastGame
         }        
     }
