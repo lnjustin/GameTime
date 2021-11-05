@@ -29,6 +29,7 @@
  *  v1.4.3 - Improved schedule tile display
  *  v1.5.0 - Improved api key input, added event notifications
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
+ *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
