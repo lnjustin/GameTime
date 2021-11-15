@@ -30,6 +30,7 @@
  *  v1.5.0 - Improved api key input, added event notifications
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
+ *  v1.5.3 - Fixes issue with tile font size configurability
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -349,7 +350,7 @@ def fetchSchedule() {
     def evenBackgroundColor = getScheduleBackgroundColorSetting("even")
     def fontSize = getScheduleFontSizeSetting()
     if (state.schedule != null) {
-        scheduleTile = "<div style='height:100%;font-size:${fontSize}%;;'><table width='100%' style='border-collapse: collapse'>"
+        scheduleTile = "<div style='height:100%;'><table width='100%' style='border-collapse: collapse; font-size:${fontSize}%;'>"
         def numRows = 0
         def numGames = state.schedule.size()
         for (game in state.schedule) {
