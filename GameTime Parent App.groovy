@@ -31,6 +31,7 @@
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  *  v1.5.3 - Fixes issue with tile font size configurability
+ *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -51,7 +52,8 @@ definition(
 @Field String xMark = "https://raw.githubusercontent.com/lnjustin/App-Images/master/xMark.svg"
 
 preferences {
-    page name: "mainPage", title: "", install: true, uninstall: true
+    page name: "mainPage", title: "", install: true, uninstall: false
+    page name: "removePage", title: "", install: false, uninstall: true
 }
 
 def mainPage() {
@@ -92,10 +94,18 @@ def mainPage() {
 		        }
             }
             section("") {
+                href(name: "removePage", title: getInterface("boldText", "Remove GameTime"), description: "", required: false, page: "removePage")
                 
                 footer()
             }
     }
+}
+
+def removePage() {
+	dynamicPage(name: "removePage", title: "Remove GameTime", install: false, uninstall: true) {
+		section ("WARNING!\n\nRemoving GameTime will remove all Team Devices\n") {
+		}
+	}
 }
 
  public static getRGB(String hex)
