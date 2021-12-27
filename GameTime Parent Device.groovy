@@ -31,6 +31,7 @@
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  *  v1.5.3 - Fixes issue with tile font size configurability
+ *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
 **/
 
 metadata
