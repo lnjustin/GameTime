@@ -31,6 +31,7 @@
  *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  *  v1.5.3 - Fixes issue with tile font size configurability
+ *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -59,6 +60,10 @@ mappings
 
 def getScheduleEndpoint() {
     return getFullApiServerUrl() + "/gametime/${app.id}?access_token=${state.accessToken}"    
+}
+
+def getUpdateInterval() {
+    return settings['updateInterval'] != null ? settings['updateInterval'] : 600
 }
 
 def instantiateToken() {
@@ -119,6 +124,7 @@ def mainPage() {
             }
             section (getInterface("header", " Settings")) {                
                 if (team) {
+                    input name: "updateInterval", type: "number", title: "Update Interval While Game In Progress (mins)", defaultValue: 10
                     input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
                     input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
                     input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
@@ -440,7 +446,7 @@ def updateState(onInitialize = false) {
     def schedule = fetchTeamSchedule()
     if (schedule == "Error: first byte timeout") {
         log.warn "API call timeout. Not updating state. Will try again later."
-        runIn(600, update)
+        runIn(getUpdateInterval(), update)
         return
     }
     
@@ -572,7 +578,7 @@ def getLastGameResult(suppressRetry = false) {
     if (state.lastRecord == null) {
         def warning = "Unable to determine result of last game for ${state.team.displayName}. Last team record not stored."
         if (suppressRetry == false) {
-            runIn(600, updateRecord)
+            runIn(getUpdateInterval(), updateRecord)
             warning += " Will keep checking."
         }
         logDebug(warning)
@@ -581,7 +587,7 @@ def getLastGameResult(suppressRetry = false) {
     else if (state.lastGame != null && state.lastRecord.asOf <= state.lastGame.gameTime) {
         logDebug("Record not yet updated for last game.")
         if (suppressRetry == false) {
-            runIn(600, updateRecord)
+            runIn(getUpdateInterval(), updateRecord)
             logDebug(" Will keep checking.")
         }
         return null        
@@ -609,7 +615,7 @@ def getLastGameResult(suppressRetry = false) {
         if (recordNotUpdated == true) {
             warning += " Record has not been updated yet."
             if (suppressRetry == false) {
-                runIn(600, updateRecord)
+                runIn(getUpdateInterval(), updateRecord)
                 warning += " Will keep checking."
             }
         }
@@ -901,7 +907,7 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         }
         else if (state.nextGame.status == "InProgress") {
             // update in progress game no matter whether game started today or not, since late night game will progress into the next day
-            runIn(600, updateGameInProgress) // while game is in progress, update every 10 minutes
+            runIn(getUpdateInterval(), updateGameInProgress) // while game is in progress, update every 10 minutes
         }
         else if (state.nextGame.status == "Delayed") {
             // update dalyed game no matter whether game started today or not, since late night game will delay into the next day
@@ -910,7 +916,7 @@ def scheduleUpdate(Boolean updatingGameInProgress=false) {
         else if (state.nextGame.status == "Scheduled" && now.after(nextGameTime)) {
             // game should have already started by now, but sportsdata.io has not updated its API to reflect it yet (10 minute delay for free API). Update in 10 minutes
             logDebug("Game should have started by now, but status still indicates the game is scheduled, not in progress. This is not uncommon. Will check again in 10 minutes.")
-            runIn(600, updateGameInProgress) // update every 10 minutes
+            runIn(getUpdateInterval(), updateGameInProgress) // update every 10 minutes
         }  
         else if (updatingGameInProgress) {
             // game is over or cancelled. Update game state
