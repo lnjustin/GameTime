@@ -32,6 +32,8 @@
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  *  v1.5.3 - Fixes issue with tile font size configurability
  *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
+ *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
+ *  v1.5.6 - Fixed issue with NFL post season
 **/
 
 metadata
@@ -48,7 +50,17 @@ metadata
         attribute "gameTimeStr", "string"
         attribute "status", "string"                    
         attribute "opponent", "string"  
-
+        
+        command(
+             "setTileTextColor", 
+             [
+                [
+                     "name":"Set Tile Text Color",
+                     "description":"Set the color of the text on your tile(s). Hex format with leading #).",
+                     "type":"text"
+                ]
+             ]
+        )
     }
 }
 
@@ -60,6 +72,10 @@ preferences
     }
 }
 
+
+def setTileTextColor(color) {
+    parent?.settingUpdate("textColor", color, "string") 
+}
 
 def logDebug(msg) 
 {
