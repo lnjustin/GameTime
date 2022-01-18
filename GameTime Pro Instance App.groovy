@@ -32,6 +32,8 @@
  *  v1.5.2 - Fixes issue with updating tile after the last game of the season
  *  v1.5.3 - Fixes issue with tile font size configurability
  *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
+ *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
+ *  v1.5.6 - Fixed issue with NFL post season
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -67,10 +69,10 @@ def getUpdateInterval() {
 }
 
 def instantiateToken() {
-     if(!state.accessToken){	
+    // if(!state.accessToken){	
          //enable OAuth in the app settings or this call will fail
          createAccessToken()	
-     }   
+    // }   
 }
 
 preferences {
@@ -1149,10 +1151,16 @@ def fetchTeams() {
 }
 
 def setSeason() {
-    def season = sendApiRequest("/scores/json/CurrentSeason")   
-    if (!season) log.error("No season found.")
-    if (league == "NFL") state.season = season
-    else state.season = season.ApiSeason
+    if (league == "NFL") {
+        def season = sendApiRequest("/scores/json/Timeframes/current")  
+        if (!season) log.error("No season found.")
+        else state.season = season.ApiSeason[0]
+    }
+    else {
+        def season = sendApiRequest("/scores/json/CurrentSeason")   
+        if (!season) log.error("No season found.")
+        else state.season = season.ApiSeason
+    }
 }
 
 def getMyTeamName() {
