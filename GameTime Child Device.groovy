@@ -34,6 +34,7 @@
  *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
  *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
  *  v1.5.6 - Fixed issue with NFL post season
+ *  v1.5.7 - Gracefully handle unauthorized API access
 **/
 
 metadata
