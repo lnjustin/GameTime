@@ -1121,7 +1121,7 @@ def sendApiRequest(path)
     catch (Exception e)
     {
         log.warn "sendApiRequest() failed: ${e.message}"
-        return "Error: ${e.message}"
+        return null
     }   
     return result
 }
