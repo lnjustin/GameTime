@@ -35,6 +35,7 @@
  *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
  *  v1.5.6 - Fixed issue with NFL post season
  *  v1.5.7 - Gracefully handle unauthorized API access
+ *  v1.5.8 - Fixed update interval bug
 **/
 
 metadata
@@ -51,17 +52,6 @@ metadata
         attribute "gameTimeStr", "string"
         attribute "status", "string"                    
         attribute "opponent", "string"  
-        
-        command(
-             "setTileTextColor", 
-             [
-                [
-                     "name":"Set Tile Text Color",
-                     "description":"Set the color of the text on your tile(s). Hex format with leading #).",
-                     "type":"text"
-                ]
-             ]
-        )
     }
 }
 
@@ -71,11 +61,6 @@ preferences
     {
         input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
-}
-
-
-def setTileTextColor(color) {
-    parent?.settingUpdate("textColor", color, "string") 
 }
 
 def logDebug(msg) 
@@ -284,3 +269,4 @@ def refresh()
 {
 
 }
+
