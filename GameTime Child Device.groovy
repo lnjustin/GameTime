@@ -35,6 +35,7 @@
  *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
  *  v1.5.6 - Fixed issue with NFL post season
  *  v1.5.7 - Gracefully handle unauthorized API access
+ *  v1.5.8 - Fixed update interval bug
 **/
 
 metadata
