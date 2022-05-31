@@ -36,6 +36,7 @@
  *  v1.5.6 - Fixed issue with NFL post season
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
+ *  v1.5.9 - Added disable option
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -152,6 +153,10 @@ def getScheduleTileBackgroundColor(oddOrEven) {
     def rgb = getRGB(hex)
     def opacity = op.toString()
     return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + opacity + ")"    
+}
+
+def settingUpdate(settingName, value, type) {
+    app.updateSetting(settingName, value)
 }
 
 def getTextColorSetting() {
