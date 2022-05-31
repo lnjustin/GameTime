@@ -36,6 +36,7 @@
  *  v1.5.6 - Fixed issue with NFL post season
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
+ *  v1.5.9 - Added disable option
 **/
 
 metadata
