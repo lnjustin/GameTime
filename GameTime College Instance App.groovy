@@ -36,6 +36,7 @@
  *  v1.5.6 - Fixed issue with NFL post season
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
+ *  v1.5.9 - Added disable option
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -145,6 +146,7 @@ def mainPage() {
                     input(name:"apiKey", type: "text", title: inputTitle, required:false, submitOnChange:true, defaultValue: key)
                 }
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
+                input name: "disabled", title:"Manually Disable?", type:"bool", required:false, submitOnChange:false
 		    }
             section("") {
                 
@@ -251,15 +253,17 @@ def uninstalled() {
 
 def initialize() {
     instantiateToken()
-    def key = getAPIKey()
-    if (league && team && key) {
-        setTeams()
-        setMyTeam()
-        createChild()
-        update(true)
-        schedule("01 01 00 ? * *", scheduledUpdate)
+    if (!settings["disabled"]) {
+        def key = getAPIKey()
+        if (league && team && key) {
+            setTeams()
+            setMyTeam()
+            createChild()
+            update(true)
+            schedule("01 01 00 ? * *", scheduledUpdate)
+        }
+        else log.error "Missing input fields."
     }
-    else log.error "Missing input fields."
 }
 
 def scheduledUpdate()
