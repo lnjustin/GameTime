@@ -37,6 +37,7 @@
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
+ *  v1.5.10 - FIxed stale logo url issue; fixed time zone bug
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -292,7 +293,7 @@ def isYesterday(Date date) {
 Date getDateObj(dateStr) {
     // accepts input in format "yyyy-MM-dd'T'HH:mm:ss", without time zone information. Assumes eastern time zone already adjusted for DST
     def str = dateStr
-   def isDST = TimeZone.getDefault().inDaylightTime( new Date() )
+    def isDST = (parent.doObserveDST() && TimeZone.getDefault().inDaylightTime( new Date() )) ? true : false
     if (isDST) str = str + "-04:00"
     else str = str + "-05:00"    
     def dateObj = toDateTime(str)
@@ -358,6 +359,27 @@ String getGameTimeOfDay(gameTime) {
     return gameTimeOfDayStr    
 }
 
+def isLogoFound(logoUrl) {
+    def isLogoFound = true
+    try {
+      
+		httpGet(logoUrl) { resp ->
+			if (resp.data.status == 404) {
+                logDebug("Logo image not found at ${logoUrl}")
+				isLogoFound = false
+			}
+		}
+    } catch (UnknownHostException uhe) {
+        // Handle exceptions as necessary
+    } catch (FileNotFoundException fnfe) {
+        logDebug("Logo image not found at ${logoUrl}")
+        isLogoFound = false
+    } catch (Exception e) {
+        // Handle exceptions as necessary
+    }   
+    return isLogoFound
+}
+
 def getScheduleData(upcomingSchedule) {
     def scheduleData = []
     for (game in upcomingSchedule) {
@@ -371,11 +393,25 @@ def getScheduleData(upcomingSchedule) {
             if (homeTeam.key == state.team.key) {
                 opponent = awayTeam.name
                 opponentLogo = awayTeam.logo
+                if (!isLogoFound(opponentLogo)) {
+                    logDebug("Refreshing logo state for game.AwayTeam")
+                    setTeams() // refresh team state data for latest logo url
+                    opponentLogo = state.teams[game.AwayTeam].logo
+                    if (isLogoFound(opponentLogo)) logDebug("Fixed logo for ${game.AwayTeam}. New logo works at ${opponentLogo}")
+                    else logDebug("Logo for ${game.AwayTeam} not fixed even after refresh. Logo at ${opponentLogo} broken too.")
+                }
                 homeOrAway = "home"
             }
             else if (awayTeam.key == state.team.key) {
                 opponent = homeTeam.name
                 opponentLogo = homeTeam.logo
+                if (!isLogoFound(opponentLogo)) {
+                    logDebug("Refreshing logo state for game.HomeTeam")
+                    setTeams() // refresh team state data for latest logo url
+                    opponentLogo = state.teams[game.HomeTeam].logo
+                    if (isLogoFound(opponentLogo)) logDebug("Fixed logo for ${game.HomeTeam}. New logo works at ${opponentLogo}")
+                    else logDebug("Logo for ${game.HomeTeam} not fixed even after refresh. Logo at ${opponentLogo} broken too.")
+                }
                 homeOrAway = "away"
             }
 
@@ -661,7 +697,23 @@ def getGameData(game) {
         def progress = (status == "InProgress") ? getProgress(game) : null
         
         def homeTeam = state.teams[game.HomeTeam]
+        if (!isLogoFound(homeTeam.logo)) {
+            logDebug("Refreshing logo state for ${homeTeam.name}")
+            setTeams() // refresh team state data for latest logo url
+            homeTeam = state.teams[game.HomeTeam]
+            if (isLogoFound(homeTeam.logo)) logDebug("Fixed logo for ${homeTeam.name}. New logo works at ${homeTeam.logo}")
+            else logDebug("Logo for ${homeTeam.name} not fixed even after refresh. Logo at ${homeTeam.logo} broken too.")
+        }
+        
         def awayTeam = state.teams[game.AwayTeam]
+        if (!isLogoFound(awayTeam.logo)) {
+            logDebug("Refreshing logo state for ${awayTeam.name}")
+            setTeams() // refresh team state data for latest logo url
+            homeTeam = state.teams[game.AwayTeam]
+            if (isLogoFound(awayTeam.logo)) logDebug("Fixed logo for ${awayTeam.name}. New logo works at ${awayTeam.logo}")
+            else logDebug("Logo for ${awayTeam.name} not fixed even after refresh. Logo at ${awayTeam.logo} broken too.")
+        }                
+                
         def opponent = null
         if (homeTeam.key == state.team.key) opponent = awayTeam
         else if (awayTeam.key == state.team.key) opponent = homeTeam
@@ -955,7 +1007,6 @@ def getSwitchValue() {
     return switchValue
 }
 
-// TO DO: show next game on tile whenever showing last game?
 def getGameTile(game) {  
     logDebug("Getting game tile for ${state.team.displayName}")
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
@@ -1297,4 +1348,5 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
+
 
