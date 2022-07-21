@@ -313,7 +313,7 @@ Date getDateObj(dateStr) {
     if (isDST) str = str + "-04:00"
     else str = str + "-05:00"    
     def dateObj = toDateTime(str)
-   // logDebug("Converting gametime. EST Date is ${estDate}. isDST = ${isDST}. gametime is ${str}. dateObj is ${dateObj}")
+    logDebug("Converting gametime. EST Date is ${estDate}. isDST = ${isDST}. gametime is ${str}. dateObj is ${dateObj}")
     return dateObj
 }
 
