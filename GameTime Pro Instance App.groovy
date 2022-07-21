@@ -37,7 +37,7 @@
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
- *  v1.5.10 - FIxed stale logo url issue; fixed time zone bug
+ *  v1.5.10 - FIxed stale logo url issue; Fixed time zone / daylight savings time issue
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -293,10 +293,15 @@ def isYesterday(Date date) {
 Date getDateObj(dateStr) {
     // accepts input in format "yyyy-MM-dd'T'HH:mm:ss", without time zone information. Assumes eastern time zone already adjusted for DST
     def str = dateStr
-    def isDST = (parent.doObserveDST() && TimeZone.getDefault().inDaylightTime( new Date() )) ? true : false
+    TimeZone tz = TimeZone.getTimeZone("America/New_York")
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(tz)
+    def estDate = cal.time 
+    def isDST = tz.inDaylightTime(estDate)
     if (isDST) str = str + "-04:00"
     else str = str + "-05:00"    
     def dateObj = toDateTime(str)
+  //  logDebug("Converting gametime. EST Date is ${estDate}. isDST = ${isDST}. gametime is ${str}. dateObj is ${dateObj}")
     return dateObj
 }
 
@@ -1348,5 +1353,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
