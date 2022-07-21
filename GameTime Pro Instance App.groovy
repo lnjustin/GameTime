@@ -290,17 +290,30 @@ def isYesterday(Date date) {
     return isYesterday
 }
 
+/*
 Date getDateObj(dateStr) {
     // accepts input in format "yyyy-MM-dd'T'HH:mm:ss", without time zone information. Assumes eastern time zone already adjusted for DST
     def str = dateStr
-    TimeZone tz = TimeZone.getTimeZone("EST")
-    Calendar cal = Calendar.getInstance()
-    cal.setTimeZone(tz)
-    def estDate = cal.time    
-    def isDST = (tz.inDaylightTime(estDate)) ? true : false
+   def isDST = (parent.doObserveDST() && TimeZone.getDefault().inDaylightTime( new Date() )) ? true : false
     if (isDST) str = str + "-04:00"
     else str = str + "-05:00"    
     def dateObj = toDateTime(str)
+    return dateObj
+}
+*/
+
+Date getDateObj(dateStr) {
+    // accepts input in format "yyyy-MM-dd'T'HH:mm:ss", without time zone information. Assumes eastern time zone already adjusted for DST
+    def str = dateStr
+    TimeZone tz = TimeZone.getTimeZone("America/New_York")
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(tz)
+    def estDate = cal.time 
+    def isDST = tz.inDaylightTime(estDate)
+    if (isDST) str = str + "-04:00"
+    else str = str + "-05:00"    
+    def dateObj = toDateTime(str)
+   // logDebug("Converting gametime. EST Date is ${estDate}. isDST = ${isDST}. gametime is ${str}. dateObj is ${dateObj}")
     return dateObj
 }
 
@@ -1352,5 +1365,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
