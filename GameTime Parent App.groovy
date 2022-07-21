@@ -96,7 +96,6 @@ def mainPage() {
                     input("evenRowTextColor", "text", title: "Text Color for Even Rows of Schedule Tile (Hex format with leading #)", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false)                      
                 }
 			    section (getInterface("header", " General Settings")) {
-                    input("observeDST", "bool", title: "Observe Daylight Savings Time?", defaultValue: true, required: false)
                     input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		        }
             }
@@ -113,10 +112,6 @@ def removePage() {
 		section ("WARNING!\n\nRemoving GameTime will remove all Team Devices\n") {
 		}
 	}
-}
-
-def doObserveDST() {
-    return (observeDST == null || observeDST == true) ? true : false    
 }
 
  public static getRGB(String hex)
@@ -389,5 +384,4 @@ def getInterface(type, txt="", link="") {
             break
     }
 } 
-
 
