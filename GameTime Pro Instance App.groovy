@@ -293,7 +293,11 @@ def isYesterday(Date date) {
 Date getDateObj(dateStr) {
     // accepts input in format "yyyy-MM-dd'T'HH:mm:ss", without time zone information. Assumes eastern time zone already adjusted for DST
     def str = dateStr
-    def isDST = (parent.doObserveDST() && TimeZone.getDefault().inDaylightTime( new Date() )) ? true : false
+    TimeZone tz = TimeZone.getTimeZone("EST")
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(tz)
+    def estDate = cal.time    
+    def isDST = (tz.inDaylightTime(estDate)) ? true : false
     if (isDST) str = str + "-04:00"
     else str = str + "-05:00"    
     def dateObj = toDateTime(str)
