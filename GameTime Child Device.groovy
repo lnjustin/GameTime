@@ -37,6 +37,7 @@
  *  v1.5.7 - Gracefully handle unauthorized API access
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
+ *  v1.5.10 - Defined push for testing
 **/
 
 metadata
@@ -110,6 +111,10 @@ def updateDevice(appID, data, scheduleData = null) {
 }
 
 def pushButton(buttonNum) {
+    sendEvent(name: "pushed", value: buttonNum, isStateChange: true)
+}
+
+def push(buttonNum) {
     sendEvent(name: "pushed", value: buttonNum, isStateChange: true)
 }
 
