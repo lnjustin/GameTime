@@ -38,6 +38,7 @@
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
  *  v1.5.10 - FIxed stale logo url issue; Fixed time zone / daylight savings time issue
+ *  v1.5.11 - FIxed device attributes to honor inactive status
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -922,16 +923,19 @@ Date getDateToSwitchFromLastToNextGame() {
 
 def getGameToDisplay() {
     def game = null
-    if (state.lastGame == null && state.nextGame != null) game = state.nextGame
-    else if (state.nextGame == null && state.lastGame != null) game = state.lastGame
-    else if (state.lastGame != null && state.nextGame != null) {
-        if (state.nextGame.status == "InProgress" || state.nextGame.status == "Delayed") game = state.nextGame
-        else {
-            def now = new Date()        
-            Date updateAtDate = getDateToSwitchFromLastToNextGame()
-            if (updateAtDate != null && now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
-            else game = state.lastGame
-        }    
+    def isClearWhenInactiveConfig = getClearWhenInactiveSetting()
+    if (!isClearWhenInactiveConfig || (isClearWhenInactiveConfig && !isInactive())) {
+        if (state.lastGame == null && state.nextGame != null) game = state.nextGame
+        else if (state.nextGame == null && state.lastGame != null) game = state.lastGame
+        else if (state.lastGame != null && state.nextGame != null) {
+            if (state.nextGame.status == "InProgress" || state.nextGame.status == "Delayed") game = state.nextGame
+            else {
+                def now = new Date()        
+                Date updateAtDate = getDateToSwitchFromLastToNextGame()
+                if (updateAtDate != null && now.after(updateAtDate) || now.equals(updateAtDate)) game = state.nextGame
+                else game = state.lastGame
+            }    
+        }
     }
     return game
 }
