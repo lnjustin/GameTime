@@ -38,7 +38,7 @@
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
  *  v1.5.10 - Fixed stale logo url issue; Fixed time zone / daylight savings time issue
- *  v1.5.11 - Fixed device attributes to honor inactive status
+ *  v1.5.12 - Fixed device attributes to honor inactive status
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
