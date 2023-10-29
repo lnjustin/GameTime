@@ -41,6 +41,7 @@
  *  v1.5.10 - Fixed stale logo url issue; Fixed time zone / daylight savings time issue
  *  v1.5.12 - Fixed device attributes to honor inactive status
  *  v1.5.13 - Fix bug with API Key input field; Configurable when to clear tile and/or clear device attributes; UI Formatting
+ *  v1.5.14 - Fix tile if no clearTile settings 
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

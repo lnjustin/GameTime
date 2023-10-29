@@ -982,7 +982,7 @@ def getGameTile(game) {
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
     def clearTileRuleSetting = getclearTileRuleSetting()
     def hourThreshold = getClearTileRuleHoursSetting()
-    if (clearTileRuleSetting == "never" || (clearTileRuleSetting == "inactive" && !isInactive(hourThreshold)) || (clearTileRuleSetting == "seasonEnd" && !isSeasonOver(hourThreshold))) {
+    if (clearTileRuleSetting == null || clearTileRuleSetting == "never" || (clearTileRuleSetting == "inactive" && !isInactive(hourThreshold)) || (clearTileRuleSetting == "seasonEnd" && !isSeasonOver(hourThreshold))) {
         def textColor = getTextColorSetting()
         def fontSize = getFontSizeSetting()
         def colorStyle = ""
