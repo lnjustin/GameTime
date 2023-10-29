@@ -12,31 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Change History:
- *  v1.2.0 - Full Feature Beta
- *  v1.2.1 - Bug fixes
- *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
- *  v1.2.3 - Bug fixes
- *  v1.2.4 - Added option to hide game result spoilers
- *  v1.2.5 - Bug fixes
- *  v1.2.6 - Bug fixes
- *  v1.2.7 - Hide record when hide game spoilers
- *  v1.3.0 - Added option to designate team as Low Priority
- *  v1.3.1 - Fixed issue with NFL bye weeks
- *  v1.4.0 - Added schedule attribute
- *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
- *  v1.4.2 - Bug fix with college schedule tile
- *  v1.4.3 - Improved schedule tile display
- *  v1.5.0 - Improved api key input, added event notifications
- *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
- *  v1.5.2 - Fixes issue with updating tile after the last game of the season
- *  v1.5.3 - Fixes issue with tile font size configurability
- *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
- *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
- *  v1.5.6 - Fixed issue with NFL post season
- *  v1.5.7 - Gracefully handle unauthorized API access
- *  v1.5.8 - Fixed update interval bug
- *  v1.5.9 - Added disable option
+ *  Change History in Parent App
 **/
 
 metadata

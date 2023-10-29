@@ -38,6 +38,9 @@
  *  v1.5.8 - Fixed update interval bug
  *  v1.5.9 - Added disable option
  *  v1.5.10 - FIxed stale logo url issue; fixed time zone bug
+ *  v1.5.10 - Fixed stale logo url issue; Fixed time zone / daylight savings time issue
+ *  v1.5.12 - Fixed device attributes to honor inactive status
+ *  v1.5.13 - Fix bug with API Key input field; Configurable when to clear tile and/or clear device attributes; UI Formatting
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -66,34 +69,34 @@ def mainPage() {
     dynamicPage(name: "mainPage") {
     	    installCheck()
 		    if(state.appInstalled == 'COMPLETE'){       
-                section (getInterface("header", " GameTime")) {
-			        section(getInterface("header", " College Sports")) {
-				        app(name: "anyOpenApp", appName: "GameTime College Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for college sports</b>", multiple: true)
-			        }
-                    section(getInterface("header", " Professional Sports")) {
-				        app(name: "anyOpenApp", appName: "GameTime Professional Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for professional sports</b>", multiple: true)
-			        } 
-                    section("") { 
-                        paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
-                    }
+                section(getInterface("header", " College Sports")) {
+                    app(name: "anyOpenApp", appName: "GameTime College Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for college sports</b>", multiple: true)
+                }
+                section(getInterface("header", " Professional Sports")) {
+                    app(name: "anyOpenApp", appName: "GameTime Professional Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for professional sports</b>", multiple: true)
+                } 
+                section("") { 
+                    paragraph getInterface("note", txt="After installing or updating your team(s) above, be sure to click the DONE button below.")
                 }
                 section (getInterface("header", " Game Tile Settings")) {
-                    input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                    input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                    input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false)
-                    input(name:"fontSize", type: "number", title: "Game Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                    input("textColor", "text", title: "Game Tile Text Color (Hex format with leading #)", defaultValue: '#000000', displayDuringSetup: false, required: false)
-                    input name: "clearWhenInactive", type: "bool", title: "Clear Tile When Inactive?", defaultValue: false
-                    input name: "hoursInactive", type: "number", title: "Inactivity Threshold (In Hours)", defaultValue: 24
+                    input("showTeamName", "bool", title: "Show Team Name on Tile?", defaultValue: false, displayDuringSetup: false, required: false, width: 4)
+                    input("showTeamRecord", "bool", title: "Show Team Record on Tile?", defaultValue: false, displayDuringSetup: false, required: false, width: 4)
+                    input("showChannel", "bool", title: "Show TV Channel on Tile?", defaultValue: false, displayDuringSetup: false, required: false, width: 4)
+                    input(name:"fontSize", type: "number", title: "Game Tile Font Size (%)", required:true, defaultValue:100, width: 6)
+                    input("textColor", "text", title: "Game Tile Text Color (Hex format with leading #)", defaultValue: '#000000', displayDuringSetup: false, required: false, width: 6)
+                    input name: "clearTileRule", type: "enum", title: "Select When to Clear Tile", options: ["never":"Never", "inactive":"When No Game +/- X Hours", "seasonEnd" : "X Hours After Season Ends"], submitOnChange:true, width: 7
+                    if (clearTileRule == "inactive" || clearTileRule == "seasonEnd") input name: "clearTileRuleHours", type: "number", title: "Hours", defaultValue: 24, width: 5
+                    input name: "clearDeviceRule", type: "enum", title: "Select When to Clear Non-Tile Device Attributes", options: ["never":"Never", "inactive":"When No Game +/- X Hours", "seasonEnd" : "X Hours After Season Ends"], submitOnChange:true, width: 7
+                    if (clearDeviceRule == "inactive" || clearDeviceRule == "seasonEnd") input name: "clearDeviceRuleHours", type: "number", title: "Hours", defaultValue: 24, width: 5
                 }
                 section (getInterface("header", " Schedule Tile Settings")) {
-                    input(name:"scheduleFontSize", type: "number", title: "Schedule Tile Font Size (%)", required:true, submitOnChange:true, defaultValue:100)
-                    input(name:"oddRowBackgroundColor", type: "text", title: "Background Color for Odd Rows of Schedule Tile (Hex format with leading #)", required:true, submitOnChange:true, defaultValue: '#FFFFFF')
-                    input(name:"oddRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Odd Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 0)
-                    input("oddRowTextColor", "text", title: "Text Color for Odd Rows of Schedule Tile (Hex format with leading #)", defaultValue: '#000000', displayDuringSetup: false, required: false)   
-                    input(name:"evenRowBackgroundColor", type: "text", title: "Background Color for Even Rows of Schedule Tile (Hex format with leading #)", required:true, submitOnChange:true, defaultValue: '#9E9E9E')
-                    input(name:"evenRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Even Rows of Schedule Tile", required:true, submitOnChange:true, defaultValue: 1)
-                    input("evenRowTextColor", "text", title: "Text Color for Even Rows of Schedule Tile (Hex format with leading #)", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false)                      
+                    input(name:"scheduleFontSize", type: "number", title: "Schedule Tile Font Size (%)", required:true, defaultValue:100, width: 12)
+                    input(name:"oddRowBackgroundColor", type: "text", title: "Background Color for Odd Rows of Schedule Tile (#Hex)", required:true, defaultValue: '#FFFFFF', width: 4)
+                    input(name:"oddRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Odd Rows of Schedule Tile", required:true, defaultValue: 0, width: 4)
+                    input("oddRowTextColor", "text", title: "Text Color for Odd Rows of Schedule Tile (#Hex)", defaultValue: '#000000', displayDuringSetup: false, required: false, width: 4)   
+                    input(name:"evenRowBackgroundColor", type: "text", title: "Background Color for Even Rows of Schedule Tile (#Hex)", required:true, defaultValue: '#9E9E9E', width: 4)
+                    input(name:"evenRowOpacity", type: "decimal", title: "Opacity (0.0 to 1.0) for Even Rows of Schedule Tile", required:true, defaultValue: 1, width: 4)
+                    input("evenRowTextColor", "text", title: "Text Color for Even Rows of Schedule Tile (#Hex)", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false, width: 4)                      
                 }
 			    section (getInterface("header", " General Settings")) {
                     input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
@@ -168,13 +171,20 @@ def getFontSizeSetting() {
     return fontSize != null ? fontSize : 100
 }
 
-def getInactivityThresholdSetting() {
-    return hoursInactive != null ? hoursInactive : 24
+def getClearTileRuleHoursSetting() {
+    return clearTileRuleHours != null ? clearTileRuleHours : 24
 }
 
-def getClearWhenInactiveSetting() {    
-   // logDebug("In getClearWhenInactive() in parent")
-    return clearWhenInactive != null ? clearWhenInactive : false
+def getclearTileRuleSetting() {    
+    return clearTileRule != null ? clearTileRule : false
+}
+
+def getClearDeviceRuleHoursSetting() {
+    return clearDeviceRuleHours != null ? clearDeviceRuleHours : 24
+}
+
+def getclearDeviceRuleSetting() {    
+    return clearDeviceRule != null ? clearDeviceRule : false
 }
 
 def footer() {
@@ -211,12 +221,14 @@ def initialize() {
 
 def getLeagueAPIKey(forAppID, forLeague) {
     def leagueKey = null
-    childApps.each { child ->
-        if (child.id != forAppID) {
-            def childKey = child.getLeagueAPIKey(forLeague)               
-            if (childKey != null) leagueKey = childKey
-        }
-    }    
+    if (forLeague != null) {
+        childApps.each { child ->
+            if (child.id != forAppID) {
+                def childKey = child.getLeagueAPIKey(forLeague)               
+                if (childKey != null) leagueKey = childKey
+            }
+        }    
+    }
     return leagueKey
 }
 

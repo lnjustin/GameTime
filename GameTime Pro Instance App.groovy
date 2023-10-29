@@ -12,32 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Change History:
- *  v1.2.0 - Full Feature Beta
- *  v1.2.1 - Bug fixes
- *  v1.2.2 - Update scheduling if late night game; Time Formatting improvements
- *  v1.2.3 - Bug fixes
- *  v1.2.4 - Added option to hide game result spoilers
- *  v1.2.5 - Bug fixes
- *  v1.2.6 - Bug fixes
- *  v1.2.7 - Hide record when hide game spoilers
- *  v1.3.0 - Added option to designate team as Low Priority
- *  v1.3.1 - Fixed issue with NFL bye weeks
- *  v1.4.0 - Added schedule attribute
- *  v1.4.1 - Fixed issue with schedule attribute displaying on native hubitat dashboards
- *  v1.4.2 - Bug fix with college schedule tile
- *  v1.4.3 - Improved schedule tile display
- *  v1.5.0 - Improved api key input, added event notifications
- *  v1.5.1 - Fixes issue with pregame event notifications when next game cancelled
- *  v1.5.2 - Fixes issue with updating tile after the last game of the season
- *  v1.5.3 - Fixes issue with tile font size configurability
- *  v1.5.4 - Added Uninstall Confirmation; Added Update Interval Configurability
- *  v1.5.5 - Added ability to configure tile text color from parent GameTime device
- *  v1.5.6 - Fixed issue with NFL post season
- *  v1.5.7 - Gracefully handle unauthorized API access
- *  v1.5.8 - Fixed update interval bug
- *  v1.5.9 - Added disable option
- *  v1.5.10 - FIxed stale logo url issue; Fixed time zone / daylight savings time issue
+ *  Change History in Parent App
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -88,26 +63,25 @@ preferences {
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
-       
-            
-            def key = getAPIKey()
-            section {
-              //  header()                
+            section {            
                 paragraph getInterface("header", " GameTime Professional Instance")
                 paragraph getInterface("note", "After selecting the league and your team, click DONE. This will create a device for the selected team, listed under the GameTime parent device.")
                 input(name:"league", type: "enum", title: "Professional Sports League", options: leagues, required:true, submitOnChange:true)
                 
-                if(!key && league) {
-                    def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
-                    def inputTitle = link + " for ${league}"
-                    input(name:"apiKey", type: "text", title: inputTitle, required:true, submitOnChange:true)
+                if(league) {
+                    def availableLeagueKey = parent.getLeagueAPIKey(app.id, league)
+                    if ((availableLeagueKey && reuseLeagueKeySetting()) || (availableLeagueKey && !reuseLeagueKeySetting() && apiKey) || (!availableLeagueKey && apiKey)) {
+                        if (!state.season) setSeason()
+                        if (!state.teams) setTeams()
+                        input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true, submitOnChange:true)
+                    }
+                    else {
+                        if (availableLeagueKey) input(name:"reuseLeagueKey", type: "bool", title: "Re-use API key for league from other GameTime app instance?", required:true, submitOnChange:true, defaultValue:true)
+                        def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
+                        def inputTitle = link + " for ${league}"
+                        input(name:"apiKey", type: "text", title: inputTitle, required:true, submitOnChange:true)
+                    }
                 }
-                else if (key && league) {
-                    if (!state.season) setSeason()
-                    if (!state.teams) setTeams()
-                    input(name:"team", type: "enum", title: "Team", options: getTeamOptions(), required:true, submitOnChange:true)
-                }
-                
             }
             if (team) {
                 section (getInterface("header", " Event Handling")) {  
@@ -138,10 +112,19 @@ def mainPage() {
                     input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
                     label title: "GameTime Instance Name", required:false, submitOnChange:true
                 }
-                if (key && league) {
-                    def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
-                    def inputTitle = link + " for ${league}"
-                    input(name:"apiKey", type: "text", title: inputTitle, required:false, submitOnChange:true, defaultValue: key)
+                if (league) {
+                    def availableLeagueKey = parent.getLeagueAPIKey(app.id, league)
+                    if ((availableLeagueKey && reuseLeagueKeySetting()) || (availableLeagueKey && !reuseLeagueKeySetting() && apiKey) || (!availableLeagueKey && apiKey)) {
+                        if (availableLeagueKey) input(name:"reuseLeagueKey", type: "bool", title: "Re-use API key for league from other GameTime app instance?", required:true, submitOnChange:true, defaultValue:true)
+                        if (availableLeagueKey && reuseLeagueKeySetting()) {
+                            paragraph getInterface("note", "Re-Using API Key: ${availableLeagueKey}")
+                        }
+                        if (!availableLeagueKey || !reuseLeagueKeySetting()) {
+                            def link = getInterface("link", "SportsData.IO API Key", "https://sportsdata.io/")
+                            def inputTitle = link + " for ${league}"
+                            input(name:"apiKey", type: "text", title: inputTitle, required:true, submitOnChange:true)
+                        }
+                    }
                 }
 			    input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
                 input name: "disabled", title:"Manually Disable?", type:"bool", required:false, submitOnChange:false
@@ -161,9 +144,14 @@ def getLeagueAPIKey(forLeague) {
                          
 def getAPIKey() {
     def key = null
-    if (apiKey) key = apiKey
-    else if (league != null) key = parent.getLeagueAPIKey(app.id, league)
+    def availableLeagueKey = parent.getLeagueAPIKey(app.id, league)
+    if ((availableLeagueKey && !reuseLeagueKey && apiKey) || (!availableLeagueKey && apiKey)) key = apiKey
+    else if (availableLeagueKey && reuseLeagueKey) key = availableLeagueKey
     return key
+}
+
+def reuseLeagueKeySetting() {
+    return reuseLeagueKey != null ?: true
 }
 
 Integer getNumGamesForScheduleSetting() {
@@ -214,13 +202,20 @@ def getTeamKey() {
     return state.team?.key  
 }
 
-def getInactivityThresholdSetting() {
-    return parent.getInactivityThresholdSetting()
+def getClearTileRuleHoursSetting() {
+    return parent.getClearTileRuleHoursSetting()
 }
 
-def getClearWhenInactiveSetting() {    
-  //  logDebug("In getClearWhenInactive() in child")
-    return parent.getClearWhenInactiveSetting()
+def getclearTileRuleSetting() {    
+    return parent.getclearTileRuleSetting()
+}
+
+def getClearDeviceRuleHoursSetting() {
+    return parent.getClearDeviceRuleHoursSetting()
+}
+
+def getclearDeviceRuleSetting() {    
+    return parent.getclearDeviceRuleSetting()
 }
 
 def footer() {
@@ -445,6 +440,7 @@ def getScheduleTile() {
 }
 
 def fetchSchedule() {
+    
     logDebug("Fetching Schedule")
     if(params.appId.toInteger() != app.id) {
         logDebug("Returning null since app ID received at endpoint is ${params.appId.toInteger()} whereas the app ID of this app is ${app.id}")
@@ -462,12 +458,14 @@ def fetchSchedule() {
         def numRows = 0
         def numGames = state.schedule.size()
         for (game in state.schedule) {
+            
             def backgroundColor = numRows % 2 == 0 ? evenBackgroundColor : oddBackgroundColor
             def textColor = numRows % 2 == 0 ? evenTextColor : oddTextColor
             scheduleTile += "<tr width='100%' height='${100/numGames}%' style='background-color:${backgroundColor}; color: ${textColor}'><td width='25%' style='margin:0; padding:4' align=left>${getGameDayOfWeek(game.gameTime)} <b>${getGameDate(game.gameTime)}</b></td>"
-            scheduleTile += "<td width='100%' style='padding:4;display:flex; align-items:center; justify-content: center;' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' height='" + 25*(fontSize/100) + "vh' style='padding:4'> ${game.opponent}</td>"
+            scheduleTile += "<td width='100%' style='padding:4;display:flex; align-items:center; justify-content: center;' align=center>" + (game.homeOrAway == "home" ? "vs " : "@ ") + "<img src='${game.opponentLogo}' height='" + (25*fontSize).div(100) + "vh' style='padding:4'> ${game.opponent}</td>"
             scheduleTile += "<td width='25%' style='padding:4;margin:0' align=right>${getGameTimeOfDay(game.gameTime)}</td></tr>"
             numRows++
+            
         }
         scheduleTile += "</table></div>" 
     }
@@ -903,6 +901,12 @@ def getGameToDisplay() {
             else game = state.lastGame
         }        
     }
+    def clearDeviceRuleSetting = getclearDeviceRuleSetting()
+    def hourThreshold = getClearDeviceRuleHoursSetting()
+    if ((clearDeviceRuleSetting == "inactive" && isInactive(hourThreshold)) || (clearDeviceRuleSetting == "seasonEnd" && isSeasonOver(hourThreshold))) {
+        // clear device attributes at end of season after inactivity threshold
+        game = null
+    }
     return game
 }
 
@@ -1015,8 +1019,9 @@ def getSwitchValue() {
 def getGameTile(game) {  
     logDebug("Getting game tile for ${state.team.displayName}")
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
-    def isClearWhenInactiveConfig = getClearWhenInactiveSetting()
-    if (!isClearWhenInactiveConfig || (isClearWhenInactiveConfig && !isInactive())) {
+    def clearTileRuleSetting = getclearTileRuleSetting()
+    def hourThreshold = getClearTileRuleHoursSetting()
+    if (clearTileRuleSetting == "never" || (clearTileRuleSetting == "inactive" && !isInactive(hourThreshold)) || (clearTileRuleSetting == "seasonEnd" && !isSeasonOver(hourThreshold))) {
         def textColor = getTextColorSetting()
         def fontSize = getFontSizeSetting()
         def colorStyle = ""
@@ -1056,12 +1061,12 @@ def getGameTile(game) {
     return gameTile
 }
 
-Boolean isInactive() {
+Boolean isInactive(inactiveThreshold) {
+    // inactiveThreshold in hours
     def isInactive = false
     Date now = new Date()
     Date inactiveDateTime = null
     Date activeDateTime = null
-    def inactiveThreshold = getInactivityThresholdSetting()
     if (state.lastGame != null && inactiveThreshold != null) {
         def lastGameTime = new Date(state.lastGame.gameTime)
         Calendar cal = Calendar.getInstance()
@@ -1090,8 +1095,27 @@ Boolean isInactive() {
     else if (inactiveDateTime != null && activeDateTime == null) {
         if (now.after(inactiveDateTime)) isInactive = true
     }
-    if (isInactive) logDebug("No game within the past ${inactiveThreshold} hour(s) and within the next ${inactiveThreshold} hour(s). ${getClearWhenInactiveSetting() ? "Hiding tile." : ""}")
+    if (isInactive) logDebug("No game within the past ${inactiveThreshold} hour(s) and within the next ${inactiveThreshold} hour(s). ${getclearTileRuleSetting() == "inactive" ? "Hiding tile." : ""} ${getclearDeviceRuleSetting() == "inactive" ? "Hiding device attributes." : ""}")
     return isInactive
+}
+
+def isSeasonOver(hourThreshold) {
+    def endOfSeason = false
+    if (state.lastGame != null && state.nextGame == null) {
+        // set endOfSeason = true if has been at least hourThreshold hours after the last game
+        if (hourThreshold != null) {
+            def lastGameTime = new Date(state.lastGame.gameTime)
+            Calendar cal = Calendar.getInstance()
+            cal.setTimeZone(location.timeZone)
+            cal.setTime(lastGameTime)
+            cal.add(Calendar.HOUR, hourThreshold as Integer)
+            Date inactiveDateTime = cal.time    
+            Date now = new Date()
+            if (now.after(inactiveDateTime)) endOfSeason = true
+        }
+        else endOfSeason = true
+    }
+    return endOfSeason
 }
 
 def getTeam(teamKey) {
@@ -1247,7 +1271,7 @@ def deleteChild()
 def sendApiRequest(path)
 {
     def params = [
-		uri: "https://fly.sportsdata.io/",
+		uri: "https://api.sportsdata.io/",
         path: "v3/" + api[league] + path,
 		contentType: "application/json",
 		query: [
