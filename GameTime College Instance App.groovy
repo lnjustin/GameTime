@@ -108,6 +108,11 @@ def mainPage() {
             }
             section (getInterface("header", " Settings")) {
                 input name: "updateInterval", type: "number", title: "Update Interval While Game In Progress (mins)", defaultValue: 10
+                input name: "displayCompletedGameDays", type: "number", title: "Days for which to display a completed game", defaultValue: 1, width: 6
+                def defaultTime = timeToday("09:00", location.timeZone).format("yyyy-MM-dd'T'HH:mm:ss.SSSZ", location.timeZone)
+                input name: "displayCompletedGameTime", type: "time", title: "Time on last day until which to display a completed game", defaultValue: defaultTime, width: 6
+                paragraph getInterface("note", "Example: Selecting '1' for Days and '9:00 AM' for Time displays a completed game until 9:00 AM the next day, at which point the next game will display.") 
+
                 if (team) input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
                 if (team) {
                     input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
@@ -225,6 +230,15 @@ def getClearDeviceRuleHoursSetting() {
 
 def getclearDeviceRuleSetting() {    
     return parent.getclearDeviceRuleSetting()
+}
+
+def displayCompletedGameDaysSetting() {
+    return displayCompletedGameDays ?: 1
+}
+
+def displayCompletedGameTimeSetting() {
+    def defaultTime = timeToday("09:00", location.timeZone).format("yyyy-MM-dd'T'HH:mm:ss.SSSZ", location.timeZone)
+    return displayCompletedGameTime ?: defaultTime
 }
 
 def getTeamKey() {
@@ -722,11 +736,18 @@ def getGameData(game) {
             else logDebug("Logo for ${awayTeam.name} not fixed even after refresh. Logo at ${awayTeam.logo} broken too.")
         } 
         def opponent = null
-        if (homeTeam.key == state.team.key) opponent = awayTeam
-        else if (awayTeam.key == state.team.key) opponent = homeTeam
+        def homeOrAway = null
+        if (homeTeam.key == state.team.key) {
+            opponent = awayTeam
+            homeOrAway = "Home"
+        }
+        else if (awayTeam.key == state.team.key) {
+            opponent = homeTeam
+            homeOrAway = "Away"
+        }
         else log.error "Team Not Playing in Game"         
 
-        gameData = [id: gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, status: status, progress: progress, channel: channel]
+        gameData = [id: gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, homeOrAway: homeOrAway, status: status, progress: progress, channel: channel]
 
     }
     return gameData
@@ -879,10 +900,13 @@ def getDateOfNextDayOfWeek(startDate, nextDayOfWeek) {
 }
 
 
-def getNumDaysLaterAtTime(startDate, numDaysLater, atHour, atMinutes) {
+def getNumDaysLaterAtTime(startDate, numDaysLater, timeLater) {
     // atTimeHour Integer 0-23, atTimeMinutes Integer 0-59
     Date daysLater = new Date(startDate.getTime())
-    daysLater += numDaysLater
+    daysLater += numDaysLater as Integer
+    def timeMap = getTimeMapFromDateTime(timeLater)
+    def atHour = timeMap.hour
+    def atMinutes = timeMap.minutes
     def laterDate = daysLater.copyWith(hourOfDay: atHour, minute: atMinutes, seconds: 0)
     return laterDate
 }
@@ -894,15 +918,8 @@ Date getDateToSwitchFromLastToNextGame() {
     if (state.nextGame != null) nextGameTime = new Date(state.nextGame.gameTime)
     def now = new Date()
     Date date = null
-    if (nextGameTime == null && lastGameTime != null) {
-        // if there is no next game, stop displaying the last game at 9AM the morning after the last game
-        date = getNumDaysLaterAtTime(lastGameTime, 1, 9, 0)  
-    }
-    else if (league == "College Football") {
-        // switch to display next game on Wednesday
-        date = getDateOfNextDayOfWeek(lastGameTime, Calendar.WEDNESDAY)        
-    }
-    else if (isToday(lastGameTime) && isToday(nextGameTime)) {
+
+    if (isToday(lastGameTime) && isToday(nextGameTime)) {
         // switch to next game today if next game is today too (double header)
         if (now.after(nextGameTime)) date = now // if double header is already scheduled to start, switch now
         else {
@@ -915,8 +932,9 @@ Date getDateToSwitchFromLastToNextGame() {
         }
     }
     else {
-        // switch to display next game at 9AM the morning after the last game
-        date = getNumDaysLaterAtTime(lastGameTime, 1, 9, 0)        
+        def numDaysLater = displayCompletedGameDaysSetting()
+        Date timeLater = toDateTime(displayCompletedGameTimeSetting())
+        date = getNumDaysLaterAtTime(lastGameTime, numDaysLater, timeLater)        
     }
     return date
 }
@@ -1229,6 +1247,15 @@ def adjustDateBySecs(Date date, Integer secs) {
     cal.add(Calendar.SECOND, secs)
     Date newDate = cal.getTime()
     return newDate
+}
+
+def getTimeMapFromDateTime(dateTime) {
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(location.timeZone)
+    cal.setTime(dateTime)
+    def hour = cal.get(Calendar.HOUR_OF_DAY)
+    def minutes = cal.get(Calendar.MINUTE)
+    return [hour: hour, minutes: minutes]
 }
 
 def logDebug(msg) {

@@ -30,6 +30,7 @@ metadata
         attribute "gameTimeStr", "string"
         attribute "status", "string"     
         attribute "opponent", "string" 
+        attribute "homeOrAway", "string" 
         
     }
 }
@@ -79,6 +80,7 @@ def updateDevice(appID, data, scheduleData = null) {
     sendEvent(name: "gameTimeStr", value: data.game != null ? data.game.gameTimeStr : "No Game Data")
     sendEvent(name: "status", value: data.game != null ? data.game.status : "No Game Data")
     sendEvent(name: "opponent", value: data.game != null ? data.game.opponent.displayName : "No Game Data")
+    sendEvent(name: "homeOrAway", value: data.game != null ? data.game.homeOrAway : "No Game Data")
     
     sendEvent(name: "tile", value: data.tile)
     sendEvent(name: "schedule", value: data.scheduleTile)

@@ -42,6 +42,7 @@
  *  v1.5.12 - Fixed device attributes to honor inactive status
  *  v1.5.13 - Fix bug with API Key input field; Configurable when to clear tile and/or clear device attributes; UI Formatting
  *  v1.5.14 - Fix tile if no clearTile settings 
+ *  v1.5.15 - Customizable timeframe for which to display completed game; Added homeOrAway device attribute 
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

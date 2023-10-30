@@ -29,6 +29,7 @@ metadata
         attribute "gameTimeStr", "string"
         attribute "status", "string"                    
         attribute "opponent", "string"  
+        attribute "homeOrAway", "string"
         
         command(
              "setTileTextColor", 
@@ -216,6 +217,7 @@ def clearParent() {
     sendEvent(name: "schedule", value: "<div style='overflow:auto;height:90%'></div>")
     sendEvent(name: "status", value: "No Game Scheduled")
     sendEvent(name: "opponent", value: "No Game Scheduled")
+    sendEvent(name: "homeOrAway", value: "No Game Scheduled")
     sendEvent(name: "switch", value: "off")    
 }
 
@@ -226,6 +228,7 @@ def copyChild(child) {
     sendEvent(name: "schedule", value: child.currentValue("schedule"))
     sendEvent(name: "status", value: child.currentValue("status"))
     sendEvent(name: "opponent", value: child.currentValue("opponent"))
+    sendEvent(name: "homeOrAway", value: child.currentValue("homeOrAway"))
     sendEvent(name: "switch", value: child.currentValue("switch"))    
 }
 
