@@ -43,6 +43,7 @@
  *  v1.5.13 - Fix bug with API Key input field; Configurable when to clear tile and/or clear device attributes; UI Formatting
  *  v1.5.14 - Fix tile if no clearTile settings 
  *  v1.5.15 - Customizable timeframe for which to display completed game; Added homeOrAway device attribute 
+ *  v1.5.16 - Handle daylight savings time change
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -101,6 +102,7 @@ def mainPage() {
                     input("evenRowTextColor", "text", title: "Text Color for Even Rows of Schedule Tile (#Hex)", defaultValue: '#FFFFFF', displayDuringSetup: false, required: false, width: 4)                      
                 }
 			    section (getInterface("header", " General Settings")) {
+                    input("refreshUponDST", "bool", title: "Refresh Upon Daylight Savings Time?", defaultValue: true, required: false)
                     input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		        }
             }
@@ -174,19 +176,19 @@ def getFontSizeSetting() {
 }
 
 def getClearTileRuleHoursSetting() {
-    return clearTileRuleHours != null ? clearTileRuleHours : 24
+    return clearTileRuleHours != null ? clearTileRuleHours : 45
 }
 
 def getclearTileRuleSetting() {    
-    return clearTileRule != null ? clearTileRule : false
+    return clearTileRule != null ? clearTileRule : "never"
 }
 
 def getClearDeviceRuleHoursSetting() {
-    return clearDeviceRuleHours != null ? clearDeviceRuleHours : 24
+    return clearDeviceRuleHours != null ? clearDeviceRuleHours : 45
 }
 
 def getclearDeviceRuleSetting() {    
-    return clearDeviceRule != null ? clearDeviceRule : false
+    return clearDeviceRule != null ? clearDeviceRule : "never"
 }
 
 def footer() {
@@ -218,6 +220,12 @@ def initialize() {
     createParentDevice()
     childApps.each { child ->
         child.updated()                
+    }
+}
+
+def refreshChildApps() {
+    childApps.each { child ->
+        child.update(false)                
     }
 }
 

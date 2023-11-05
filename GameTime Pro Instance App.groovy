@@ -273,9 +273,30 @@ def initialize() {
 
 def scheduledUpdate()
 {
+    scheduleUpdateUponDSTChange()
     update(true)    
 }
 
+def scheduleUpdateUponDSTChange() {
+    TimeZone timeZone = TimeZone.getDefault()
+    def observesDST = timeZone.observesDaylightTime()
+    if (observesDST) {
+        // if DST observed, then check to see if DST change will occur today
+        def now = new Date()
+        def midnight =  now.copyWith(hourOfDay: 0, minute: 1, seconds: 0)
+        def twoAM =  now.copyWith(hourOfDay: 2, minute: 1, seconds: 0)
+        def inDSTMidnight = timeZone.inDaylightTime(midnight)
+        def inDST2am = timeZone.inDaylightTime(twoAM)
+        if (inDSTMidnight != inDST2am) {
+            logDebug("DST Change Occurs Today")
+            if (twoAM.after(now)) {
+                logDebug("Scheduling update for 2:00 am today in order to update after DST Change")
+                runOnce(twoAM, update)
+            }
+            else logDebug("But not scheduling update because DST change has already occurred")
+        }
+    }
+}
 
 def isToday(Date date) {
     def isToday = false
