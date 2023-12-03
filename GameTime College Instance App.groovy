@@ -320,15 +320,18 @@ def setTeams() {
 }
 
 def setStandings() {
-   def fullTeams = fetchTeams()
-   for (tm in fullTeams) {
-       state.teams[tm.Key]?.wins = getIntValue(tm.Wins)
-       state.teams[tm.Key]?.losses = getIntValue(tm.Losses)
-       state.teams[tm.Key]?.rank = tm.ApRank
-       if (tm.Key == state.team.key) {
-           state.team = state.teams[tm.Key]
-       }
-   }
+    if (!state.teams) setTeams()
+    else {
+        def fullTeams = fetchTeams()
+        for (tm in fullTeams) {
+            state.teams[tm.Key]?.wins = getIntValue(tm.Wins)
+            state.teams[tm.Key]?.losses = getIntValue(tm.Losses)
+            state.teams[tm.Key]?.rank = tm.ApRank
+            if (tm.Key == state.team.key) {
+                state.team = state.teams[tm.Key]
+            }
+        }
+    }
 }
 
 def getIntValue(standingComponent) {

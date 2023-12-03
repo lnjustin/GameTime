@@ -44,6 +44,7 @@
  *  v1.5.14 - Fix tile if no clearTile settings 
  *  v1.5.15 - Customizable timeframe for which to display completed game; Added homeOrAway device attribute 
  *  v1.5.16 - Handle daylight savings time change
+ *  v1.5.17 - Safeguard added in SetStandings() against team state data having been cleared
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
