@@ -106,16 +106,21 @@ def mainPage() {
                     input name: "notificationDevices", type: "capability.notification", title: "Devices to Notify", required: false, multiple: true, submitOnChange: false
                 }
                 section (getInterface("header", " Scoring Calibration")) {  
-                    if (state.calibrationData != null) {
-                        paragraph getInterface("note", "Scoring calibrated based on game against ${state.calibrationData.game.opponent.displayName} that occurred ${getGameTimeStrFromUnix(state.calibrationData.game.gameTime)} ")
+                    if (state.calibrationData != null && !recalibrateScoring) {
+                        paragraph getInterface("note", "Scoring has been calibrated based on the game against ${state.calibrationData.game.opponent.displayName} that occurred ${getGameTimeStrFromUnix(state.calibrationData.game.gameTime)} ")
                         input("recalibrateScoring", "bool", title: "Re-Calibrate Scoring?", defaultValue: false, required: false, submitOnChange: true)
                     }
-                    if (state.lastGame && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
-                        paragraph getInterface("note", "To calibrate scoring, enter the score of the team's last game against " + state.lastGame.opponent.displayName + " " + getGameTimeStrFromUnix(state.lastGame.gameTime) +  ". Calibration requires that neither team have a score of 0.") 
-                        input name: "actualLastGameHomeScore", type: "number", title: "" + state.lastGame.homeTeam?.displayName + " Score"
-                        input name: "actualLastGameAwayScore", type: "number", title: "" + state.lastGame.awayTeam?.displayName + " Score"
+                    def calibrationGame = null
+                    if (state.calibrationData == null || recalibrateScoring == true) {
+                        // get last game data for calibration
+                        calibrationGame = getLastGameData()
                     }
-                    else if (state.lastGame == null) {
+                    if (calibrationGame && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
+                        paragraph getInterface("note", "To calibrate scoring, enter the score of the team's last game against " + calibrationGame.opponent.displayName + " " + getGameTimeStrFromUnix(calibrationGame.gameTime) +  ". Calibration requires that neither team have a score of 0.") 
+                        input name: "actualLastGameHomeScore", type: "number", title: "" + calibrationGame.homeTeam?.displayName + " Score"
+                        input name: "actualLastGameAwayScore", type: "number", title: "" + calibrationGame.awayTeam?.displayName + " Score"
+                    }
+                    else if (calibrationGame == null && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
                         paragraph getInterface("note", "Scoring calibration requires at least one past game that has completed. Return back to the app once a game has completed, in order to calibrate scoring.")
                     }
                 }
@@ -271,8 +276,12 @@ def updated() {
     unschedule()
 	unsubscribe()
     def storedRecord = state.lastRecord
+    def storedCalibrationData = state.calibrationData
+    def storedGameForCalibration = state.gameForCalibration
     state.clear()
     if (storedRecord != null) state.lastRecord = storedRecord
+    state.calibrationData = storedCalibrationData
+    state.gameForCalibration = storedGameForCalibration
 	initialize()
 }
 
@@ -290,21 +299,54 @@ def initialize() {
             setMyTeam()
             createChild()
             update(true, true)
+            app.updateSetting("recalibrateScoring",[value:"false",type:"bool"])
             schedule("01 01 00 ? * *", scheduledUpdate)
         }
         else log.error "Missing input fields."
     }
 }
 
+def getLastGameData() {
+    setMyTeam()
+    def schedule = fetchTeamSchedule()
+    if (schedule == "Error: first byte timeout") {
+        log.warn "API call timeout."
+        return
+    }
+    
+    def now = new Date()
+    def lastGame = null
+    for (game in schedule) {
+        def gameTime = getGameTime(game)
+        def status = game.Status 
+        if (gameTime != null && (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed")) {
+            // nothing to do
+        }
+        else if (gameTime != null) {
+            // handle finished game
+            if (lastGame == null) lastGame = game
+            else {
+                 def lastGameTime = getGameTime(lastGame)
+                 if (getSecondsBetweenDates(gameTime, now) < getSecondsBetweenDates(lastGameTime, now)) {
+                      lastGame = game
+                 }
+            }
+        }
+    }
+
+    state.gameForCalibration = getGameData(lastGame)
+    return state.gameForCalibration
+}
+
 def setScoreScalingFactor() {
     logDebug("Scoring Calibration: Setting Scaling Factor.")
-    if (actualLastGameHomeScore && actualLastGameHomeScore > 0 && actualLastGameAwayScore && actualLastGameAwayScore > 0 && state.lastGame != null) {
+    if (actualLastGameHomeScore && actualLastGameHomeScore > 0 && actualLastGameAwayScore && actualLastGameAwayScore > 0 && state.gameForCalibration != null) {
         if (state.calibrationData == null || (state.calibrationData != null && recalibrateScoring == true)) {
             state.calibrationData = [:]
-            state.calibrationData.game = state.lastGame
-            if (state.lastGame.scrambledHomeScore > 0 && state.lastGame.scrambledAwayScore > 0) {
-                def scaleFactor = actualLastGameHomeScore / state.lastGame.scrambledHomeScore
-                def calculatedAwayScore = Math.round(state.lastGame.scrambledAwayScore * scaleFactor)
+            state.calibrationData.game = state.gameForCalibration
+            if (state.gameForCalibration.scrambledHomeScore > 0 && state.gameForCalibration.scrambledAwayScore > 0) {
+                def scaleFactor = actualLastGameHomeScore / state.gameForCalibration.scrambledHomeScore
+                def calculatedAwayScore = Math.round(state.gameForCalibration.scrambledAwayScore * scaleFactor)
                 if (calculatedAwayScore == actualLastGameAwayScore) {
                     state.calibrationData.scaleFactor = scaleFactor
                     logDebug("Scoring Calibration Success! Scaling factor is ${scaleFactor}.")
@@ -316,6 +358,7 @@ def setScoreScalingFactor() {
             }
             else logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")
         }
+        else logDebug("Settings updated with Re-calibrating scoring.")
     }
     else if ((actualLastGameHomeScore && actualLastGameHomeScore == 0) || (actualLastGameAwayScore && actualLastGameAwayScore == 0)) {
         logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")
@@ -1105,6 +1148,10 @@ def updateGameInProgress() {
             logDebug("Updating game in progress. Progress is ${updatedGameData.progress}. Status is ${updatedGameData.status}")
             state.nextGame.progress = updatedGameData.progress
             state.nextGame.status = updatedGameData.status
+            state.nextGame.scrambledAwayScore = updatedGameData.scrambledAwayScore
+            state.nextGame.scrambledHomeScore = updatedGameData.scrambledHomeScore
+            state.nextGame.descrambledAwayScore = updatedGameData.descrambledAwayScore
+            state.nextGame.descrambledHomeScore = updatedGameData.descrambledHomeScore
         }
         updateDevice([game: state.nextGame, switchValue: getSwitchValue(), tile: getGameTile(state.nextGame), scheduleTile: getScheduleTile()])
         scheduleUpdate(true)
