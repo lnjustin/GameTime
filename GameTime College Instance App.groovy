@@ -134,7 +134,10 @@ def mainPage() {
                 input name: "displayCompletedGameTime", type: "time", title: "Time on last day until which to display a completed game", defaultValue: defaultTime, width: 6
                 paragraph getInterface("note", "Example: Selecting '1' for Days and '9:00 AM' for Time displays a completed game until 9:00 AM the next day, at which point the next game will display.") 
 
-                if (team) input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
+                if (team) {
+                    input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
+                    if (!hideGameResult) input name: "hideScore", title:"Hide Score?", description: "Score can be +/- 1 point from actual score due to API limitations.", type:"bool", required:false, submitOnChange:false
+                }
                 if (team) {
                     input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
                     input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
@@ -1195,7 +1198,7 @@ def getGameTile(game) {
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center>${parent.showTeamRecord && game.homeTeam.rank != null ? game.homeTeam.rank : ''} ${game.homeTeam.name}</td></tr>" 
             }
-            if (game.descrambledAwayScore && game.descrambledHomeScore) {
+            if (!hideScore && game.descrambledAwayScore && game.descrambledHomeScore) {
                 gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${game.descrambledAwayScore}</td>"
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center>${game.descrambledHomeScore}</td></tr>" 
