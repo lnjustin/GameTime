@@ -74,6 +74,7 @@ def mainPage() {
 
                 if(league) {
                     def availableLeagueKey = parent.getLeagueAPIKey(app.id, league)
+                    if (availableLeagueKey && reuseLeagueKeySetting()) app.updateSetting("reuseLeagueKey",[value:"true",type:"bool"])
                     if ((availableLeagueKey && reuseLeagueKeySetting()) || (availableLeagueKey && !reuseLeagueKeySetting() && apiKey) || (!availableLeagueKey && apiKey)) {
                         if (!state.teams) setTeams()
                         input(name:"conference", type: "enum", title: "Conference", options: getConferenceOptions(), required:true, submitOnChange:true)
@@ -106,6 +107,7 @@ def mainPage() {
                     input name: "notificationDevices", type: "capability.notification", title: "Devices to Notify", required: false, multiple: true, submitOnChange: false
                 }
                 section (getInterface("header", " Scoring Calibration")) {  
+                    paragraph getInterface("note", "Calibrating scoring enables the app to determine the approximate score of a game, for display during and after a game. Note, though, that the score can sometimes be plus or minus 1 point of the actual score.")
                     if (state.calibrationData != null && !recalibrateScoring) {
                         paragraph getInterface("note", "Scoring has been calibrated based on the game against ${state.calibrationData.game.opponent.displayName} that occurred ${getGameTimeStrFromUnix(state.calibrationData.game.gameTime)} ")
                         input("recalibrateScoring", "bool", title: "Re-Calibrate Scoring?", defaultValue: false, required: false, submitOnChange: true)
@@ -349,6 +351,8 @@ def setScoreScalingFactor() {
                 def calculatedAwayScore = Math.round(state.gameForCalibration.scrambledAwayScore * scaleFactor)
                 if (calculatedAwayScore == actualLastGameAwayScore) {
                     state.calibrationData.scaleFactor = scaleFactor
+                    state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
+                    state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
                     logDebug("Scoring Calibration Success! Scaling factor is ${scaleFactor}.")
                 }
                 else {
