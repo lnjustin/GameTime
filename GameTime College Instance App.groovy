@@ -659,6 +659,7 @@ def getGameTimeStrFromUnix(unixGameTime) {
 def updateState(onInitialize = false) {     
     updateAPICallInfo()
     def storedNextGame = state.nextGame
+    def storedLastGame = state.lastGame
     def storedRecord = getRecord(state.team)
     
     def schedule = fetchTeamSchedule()
@@ -706,6 +707,7 @@ def updateState(onInitialize = false) {
 
     state.nextGame = getGameData(nextGame)
     state.lastGame = getGameData(lastGame)
+    if (storedLastGame && storedLastGame.id == state.lastGame?.id) state.lastGame?.notifiedOfResult = storedLastGame?.notifiedOfResult
     state.schedule = getScheduleData(upcomingSchedule)
     setStandings()
     
