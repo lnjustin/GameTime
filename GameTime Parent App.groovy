@@ -46,6 +46,7 @@
  *  v1.5.16 - Handle daylight savings time change
  *  v1.5.17 - Safeguard added in SetStandings() against team state data having been cleared
  *  v1.6.0  - Determine win-loss from scrambled score; Add option to descramble scoring and display on tile
+ *  v1.6.1  - Suppress win-loss notification on app initialization
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

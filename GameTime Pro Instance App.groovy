@@ -707,9 +707,9 @@ def updateState(onInitialize = false) {
 
 }
 
-def setLastGameResult(hasRecordChanged, suppressRetry = false) {
+def setLastGameResult(hasRecordChanged, onInitialize = false) {
     state.lastGame.resultFromScore = getLastGameResultFromScore()
-    if (state.lastGame.resultFromScore == null && hasRecordChanged) state.lastGame.resultFromRecord = getLastGameResultFromRecord(suppressRetry)
+    if (state.lastGame.resultFromScore == null && hasRecordChanged) state.lastGame.resultFromRecord = getLastGameResultFromRecord(onInitialize)
     if (state.lastGame.resultFromScore != null) state.lastGame.status = state.lastGame.resultFromScore
     else if (state.lastGame.resultFromRecord != null) state.lastGame.status = state.lastGame.resultFromRecord
     if (state.lastGame.resultFromScore != null && state.lastGame.resultFromRecord != null && state.lastGame.resultFromRecord != state.lastGame.resultFromScore) {
@@ -719,11 +719,11 @@ def setLastGameResult(hasRecordChanged, suppressRetry = false) {
     }
     if (state.lastGame.notifiedOfResult == null || state.lastGame.notifiedOfResult == false) {
         if (state.lastGame.status == "Won") {
-            handleWinEvent(state.lastGame)
+            if (!onInitialize) handleWinEvent(state.lastGame)
             state.lastGame.notifiedOfResult = true
         }
         else if (state.lastGame.status == "Lost") {
-            handleLossEvent(state.lastGame)
+            if (!onInitialize) handleLossEvent(state.lastGame)
             state.lastGame.notifiedOfResult = true
         }
     }
