@@ -97,7 +97,6 @@ def mainPage() {
                         input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
                 }
                 section (getInterface("header", " Tile Content Settings")) {  
-                    input name: "showGameResult", title:"Show Game Result?", type:"bool", required:false, defaultValue: false, submitOnChange:false
                     input name: "showScore", title:"Show Score?",  type:"bool", required:false, defaultValue: false, submitOnChange:true
                     paragraph getInterface("note", "Note: Score display is a best effort feature. The displayed score is often correct but is nonetheless subject to inaccuracy, especially lower scoring games, due to the nature of the API used.")
                     if (showScore) {
@@ -118,6 +117,10 @@ def mainPage() {
                         else if (calibrationGame == null && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
                             paragraph getInterface("note", "Scoring calibration requires at least one past game that has completed. Return back to the app once a game has completed, in order to calibrate scoring.")
                         }
+                    }
+                    input name: "showGameResult", title:"Show Game Result?", type:"bool", required:false, defaultValue: false, submitOnChange:true
+                    if (showGameResult && showScore) {
+                        input(name:"showGameResultMethod", type: "enum", title: "Select How to Show Result", options: ["Text on Tile", "Color of Score"], required:true, submitOnChange:false)
                     }
                 }
                 section (getInterface("header", " Event Handling")) {  
@@ -1241,7 +1244,11 @@ def getGameTile(game) {
             def detailStr = null
             def gameFinished = (game.status == "Scheduled" || game.status == "InProgress") ? false : true
             if (game.status == "InProgress") detailStr = game.progress
-            else if (gameFinished) detailStr = game.status
+            else if (gameFinished) {
+                if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") detailStr = null // will show game result with color of score instead of text
+                else if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Text on Tile") detailStr = game.status               
+                else if (getShowGameResultSetting()) detailStr = game.status
+            }
             else detailStr = game.gameTimeStr   
         
             gameTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;${colorStyle};'><table width='100%'>"
@@ -1254,9 +1261,21 @@ def getGameTile(game) {
                 gameTile += "<td width='40%' align=center>${game.homeTeam.name}</td></tr>" 
             }
             if (getShowScoreSetting() && game.descrambledAwayScore && game.descrambledHomeScore) {
-                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${game.descrambledAwayScore}</td>"
+                def awayScoreColor = null
+                def homeScoreColor = null
+                if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") {
+                    if (game.homeOrAway == "Away") {
+                        if (game.descrambledAwayScore > game.descrambledHomeScore) awayScoreColor = "#059936" // green
+                        else if (game.descrambledAwayScore < game.descrambledHomeScore) awayScoreColor = "#C33414" // red
+                    }
+                    else if (game.homeOrAway == "Home") {
+                        if (game.descrambledAwayScore < game.descrambledHomeScore) homeScoreColor = "#C33414" // red
+                        else if (game.descrambledAwayScore > game.descrambledHomeScore) homeScoreColor = "#059936" // green
+                    }
+                }
+                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center" + (awayScoreColor ? " bgcolor='${awayScoreColor}'" : "") +  ">${game.descrambledAwayScore}</td>"
                 gameTile += "<td width='10%' align=center></td>"
-                gameTile += "<td width='40%' align=center>${game.descrambledHomeScore}</td></tr>" 
+                gameTile += "<td width='40%' align=center" + (homeScoreColor ? " bgcolor='${homeScoreColor}'" : "") +  ">${game.descrambledHomeScore}</td></tr>" 
             }
             if (parent.showTeamRecord && getShowGameResultSetting()) {
                 def awayTeamRecordSuffix = ""
@@ -1269,7 +1288,7 @@ def getGameTile(game) {
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center style='font-size:${fontSize*0.75}%'>${'(' + game.homeTeam.wins + '-' + game.homeTeam.losses + homeTeamRecordSuffix + ')'}</td></tr>"  
             }
-            gameTile += "<tr style='padding-bottom: 0em;'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
+            if (detailStr) gameTile += "<tr style='padding-bottom: 0em;'><td width='100%' align=center colspan=3>${detailStr}</td></tr>"
             if (parent.showChannel && game.channel != "null" && game.channel != null && !gameFinished) gameTile += "<tr><td width='100%' align=center colspan=3 style='font-size:${fontSize*0.75}%'>${game.channel}</td></tr>"
             gameTile += "</table></div>"  
         }    
