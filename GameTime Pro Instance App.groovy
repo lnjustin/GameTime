@@ -70,6 +70,7 @@ def mainPage() {
                 
                 if(league) {
                     def availableLeagueKey = parent.getLeagueAPIKey(app.id, league)
+                    if (availableLeagueKey && reuseLeagueKeySetting()) app.updateSetting("reuseLeagueKey",[value:"true",type:"bool"])
                     if ((availableLeagueKey && reuseLeagueKeySetting()) || (availableLeagueKey && !reuseLeagueKeySetting() && apiKey) || (!availableLeagueKey && apiKey)) {
                         if (!state.season) setSeason()
                         if (!state.teams) setTeams()
@@ -84,6 +85,41 @@ def mainPage() {
                 }
             }
             if (team) {
+                section (getInterface("header", " Tile Timing Settings")) {  
+                        input name: "updateInterval", type: "number", title: "Update Interval While Game In Progress (mins)", defaultValue: 10   
+                        input name: "displayCompletedGameDays", type: "number", title: "Days for which to display a completed game", defaultValue: 1, width: 6
+                        def defaultTime = timeToday("09:00", location.timeZone).format("yyyy-MM-dd'T'HH:mm:ss.SSSZ", location.timeZone)
+                        input name: "displayCompletedGameTime", type: "time", title: "Time on last day until which to display a completed game", defaultValue: defaultTime, width: 6
+                        paragraph getInterface("note", "Example: Selecting '1' for Days and '9:00 AM' for Time displays a completed game until 9:00 AM the next day, at which point the next game will display.") 
+                        input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
+                        input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
+                        paragraph getInterface("note", "A low priority team will only display on the 'all teams' GameTime device if no higher priority team has a game within X hours. The Low Priority Team Hour Threshold specifies X. If you change the priority status of a team after install, you must go to the parent app and click DONE in order for the prioritzation change to have immediate effect.") 
+                        input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
+                }
+                section (getInterface("header", " Tile Content Settings")) {  
+                    input name: "showGameResult", title:"Show Game Result?", type:"bool", required:false, defaultValue: false, submitOnChange:false
+                    input name: "showScore", title:"Show Score?",  type:"bool", required:false, defaultValue: false, submitOnChange:true
+                    paragraph getInterface("note", "Note: Score display is a best effort feature. The displayed score is often correct but is nonetheless subject to inaccuracy, especially lower scoring games, due to the nature of the API used.")
+                    if (showScore) {
+                        if (state.calibrationData != null && !recalibrateScoring) {
+                            paragraph getInterface("note", "Scoring has been calibrated based on the game against ${state.calibrationData.game.opponent.displayName} that occurred ${getGameTimeStrFromUnix(state.calibrationData.game.gameTime)} ")
+                            input("recalibrateScoring", "bool", title: "Re-Calibrate Scoring?", defaultValue: false, required: false, submitOnChange: true)
+                        }
+                        def calibrationGame = null
+                        if (state.calibrationData == null || recalibrateScoring == true) {
+                            // get last game data for calibration
+                            calibrationGame = getLastGameData()
+                        }
+                        if (calibrationGame && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
+                            paragraph getInterface("note", "To calibrate scoring, enter the score of the team's last game against " + calibrationGame.opponent.displayName + " " + getGameTimeStrFromUnix(calibrationGame.gameTime) +  ". Calibration requires that neither team have a score of 0.") 
+                            input name: "actualLastGameHomeScore", type: "number", title: "" + calibrationGame.homeTeam?.displayName + " Score"
+                            input name: "actualLastGameAwayScore", type: "number", title: "" + calibrationGame.awayTeam?.displayName + " Score"
+                        }
+                        else if (calibrationGame == null && ((state.calibrationData != null && recalibrateScoring == true) || state.calibrationData == null)) {
+                            paragraph getInterface("note", "Scoring calibration requires at least one past game that has completed. Return back to the app once a game has completed, in order to calibrate scoring.")
+                        }
+                    }
+                }
                 section (getInterface("header", " Event Handling")) {  
                     paragraph getInterface("subHeader", " First Pre-Game Event")
                     paragraph getInterface("note", "Button 1 will be pushed upon the first pre-game event.") 
@@ -102,18 +138,8 @@ def mainPage() {
                     input name: "notificationDevices", type: "capability.notification", title: "Devices to Notify", required: false, multiple: true, submitOnChange: false
                 }
             }
-            section (getInterface("header", " Settings")) {                
+            section (getInterface("header", " General Settings")) {                
                 if (team) {
-                    input name: "updateInterval", type: "number", title: "Update Interval While Game In Progress (mins)", defaultValue: 10
-                    input name: "displayCompletedGameDays", type: "number", title: "Days for which to display a completed game", defaultValue: 1, width: 6
-                    def defaultTime = timeToday("09:00", location.timeZone).format("yyyy-MM-dd'T'HH:mm:ss.SSSZ", location.timeZone)
-                    input name: "displayCompletedGameTime", type: "time", title: "Time on last day until which to display a completed game", defaultValue: defaultTime, width: 6
-                    paragraph getInterface("note", "Example: Selecting '1' for Days and '9:00 AM' for Time displays a completed game until 9:00 AM the next day, at which point the next game will display.") 
-                    input name: "hideGameResult", title:"Hide Game Result?", type:"bool", required:false, submitOnChange:false
-                    input name: "lowPriority", title:"Low Priority Team?", type:"bool", required:false, submitOnChange:false
-                    input name: "priorityHourThreshold", type: "number", title: "Low Priority Team Hour Threshold", defaultValue: 24
-                    paragraph getInterface("note", "A low priority team will only display on the 'all teams' GameTime device if no higher priority team has a game within X hours. The Low Priority Team Hour Threshold specifies X. If you change the priority status of a team after install, you must go to the parent app and click DONE in order for the prioritzation change to have immediate effect.") 
-                    input name: "numGamesForSchedule", type: "number", title: "Num Games For Schedule Tile", defaultValue: 3
                     label title: "GameTime Instance Name", required:false, submitOnChange:true
                 }
                 if (league) {
@@ -182,8 +208,12 @@ def getFontSizeSetting() {
     return parent.getFontSizeSetting()
 }
 
-def getHideGameResultSetting() {
-    return hideGameResult ? hideGameResult : false
+def getShowGameResultSetting() {
+    return showGameResult ? showGameResult : false
+}
+
+def getShowScoreSetting() {
+    return showScore ? showScore : false
 }
 
 def getTextColorSetting() {
@@ -243,8 +273,12 @@ def updated() {
     unschedule()
 	unsubscribe()
     def storedRecord = state.lastRecord
+    def storedCalibrationData = state.calibrationData
+    def storedGameForCalibration = state.gameForCalibration
     state.clear()
     if (storedRecord != null) state.lastRecord = storedRecord
+    state.calibrationData = storedCalibrationData
+    state.gameForCalibration = storedGameForCalibration
 	initialize()
 }
 
@@ -263,12 +297,75 @@ def initialize() {
             setStandings()
             setMyTeam()
             createChild()        
-            update(true)
+            update(true, true)
+            app.updateSetting("recalibrateScoring",[value:"false",type:"bool"])
             schedule("01 01 00 ? * *", setSeason)
             schedule("15 01 00 ? * *", scheduledUpdate)
         }
         else log.error "Missing input fields."
     }
+}
+
+def getLastGameData() {
+    setMyTeam()
+    def schedule = fetchTeamSchedule()
+    if (schedule == "Error: first byte timeout") {
+        log.warn "API call timeout."
+        return
+    }
+    
+    def now = new Date()
+    def lastGame = null
+    for (game in schedule) {
+        def gameTime = getGameTime(game)
+        def status = game.Status 
+        if (gameTime != null && (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed")) {
+            // nothing to do
+        }
+        else if (gameTime != null) {
+            // handle finished game
+            if (lastGame == null) lastGame = game
+            else {
+                 def lastGameTime = getGameTime(lastGame)
+                 if (getSecondsBetweenDates(gameTime, now) < getSecondsBetweenDates(lastGameTime, now)) {
+                      lastGame = game
+                 }
+            }
+        }
+    }
+
+    state.gameForCalibration = getGameData(lastGame)
+    return state.gameForCalibration
+}
+
+def setScoreScalingFactor() {
+    logDebug("Scoring Calibration: Setting Scaling Factor.")
+    if (actualLastGameHomeScore && actualLastGameHomeScore > 0 && actualLastGameAwayScore && actualLastGameAwayScore > 0 && state.gameForCalibration != null) {
+        if (state.calibrationData == null || (state.calibrationData != null && recalibrateScoring == true)) {
+            state.calibrationData = [:]
+            state.calibrationData.game = state.gameForCalibration
+            if (state.gameForCalibration.scrambledHomeScore > 0 && state.gameForCalibration.scrambledAwayScore > 0) {
+                def scaleFactor = actualLastGameHomeScore / state.gameForCalibration.scrambledHomeScore
+                def calculatedAwayScore = Math.round(state.gameForCalibration.scrambledAwayScore * scaleFactor)
+                if (calculatedAwayScore == actualLastGameAwayScore) {
+                    state.calibrationData.scaleFactor = scaleFactor
+                    state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
+                    state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
+                    logDebug("Scoring Calibration Success! Scaling factor is ${scaleFactor}.")
+                }
+                else {
+                    state.calibrationData.scaleFactor = null
+                    logDebug("Scoring Calibration Failed: With a scaling factor of ${scaleFactor}, calculated away score of ${calculatedAwayScore} but actual away score was ${actualLastGameAwayScore}.")
+                }
+            }
+            else logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")
+        }
+        else logDebug("Settings updated with Re-calibrating scoring.")
+    }
+    else if ((actualLastGameHomeScore && actualLastGameHomeScore == 0) || (actualLastGameAwayScore && actualLastGameAwayScore == 0)) {
+        logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")
+    }
+    else logDebug("Warning: Scoring Calibration not completed.")
 }
 
 def scheduledUpdate()
@@ -367,6 +464,11 @@ String getGameTimeStr(Date gameTime) {
     dateFormat.setTimeZone(location.timeZone)        
     def gameTimeStr = gameTimeStrPrefix + dateFormat.format(gameTime)    
     return gameTimeStr
+}
+
+def getGameTimeStrFromUnix(unixGameTime) {
+    def dateObj = new Date(unixGameTime)
+    return getGameTimeStr(dateObj)
 }
 
 String getGameDate(gameTime) {
@@ -522,6 +624,7 @@ def getUpdatedGameData(gameToUpdate) {
 def updateState(onInitialize = false) {
     updateAPICallInfo()
     def storedNextGame = state.nextGame
+    def storedLastGame = state.lastGame
     def storedRecord = getRecord(state.team)
     
     def schedule = fetchTeamSchedule()
@@ -570,6 +673,7 @@ def updateState(onInitialize = false) {
 
     state.nextGame = getGameData(nextGame)
     state.lastGame = getGameData(lastGame)
+    if (storedLastGame && storedLastGame.id == state.lastGame?.id) state.lastGame?.notifiedOfResult = storedLastGame?.notifiedOfResult
     
     state.schedule = getScheduleData(upcomingSchedule)
        
@@ -591,17 +695,38 @@ def updateState(onInitialize = false) {
             }
         }
     }
-    if (getHideGameResultSetting() == null || getHideGameResultSetting() == false) {
-        def lastGameResult = getLastGameResult(onInitialize)
-        // TO DO: build in a safeguard to make sure status is only set to result if the last game's status was F, F/OT, or F/SO (not canceled, etc.)
-        if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
-        if (hasRecordChanged && lastGameResult == "Won") handleWinEvent(state.lastGame.opponent.displayName)
-        else if (hasRecordChanged && lastGameResult == "Lost") handleLossEvent(state.lastGame.opponent.displayName)
+    if (getShowGameResultSetting() && state.lastGame != null) {
+        if (state.lastGame.status == "Final" || state.lastGame.status == "F/OT" || state.lastGame.status == "F/SO") {
+            // Only report game result once API reports game as over
+            setLastGameResult(hasRecordChanged, onInitialize)
+        }
     }
     
     Date dateToUpdateDisplay = getDateToSwitchFromLastToNextGame()
     if (dateToUpdateDisplay != null && dateToUpdateDisplay.after(now)) runOnce(dateToUpdateDisplay, updateDisplayedGame)
 
+}
+
+def setLastGameResult(hasRecordChanged, suppressRetry = false) {
+    state.lastGame.resultFromScore = getLastGameResultFromScore()
+    if (state.lastGame.resultFromScore == null && hasRecordChanged) state.lastGame.resultFromRecord = getLastGameResultFromRecord(suppressRetry)
+    if (state.lastGame.resultFromScore != null) state.lastGame.status = state.lastGame.resultFromScore
+    else if (state.lastGame.resultFromRecord != null) state.lastGame.status = state.lastGame.resultFromRecord
+    if (state.lastGame.resultFromScore != null && state.lastGame.resultFromRecord != null && state.lastGame.resultFromRecord != state.lastGame.resultFromScore) {
+        def resultWarning = "Warning: Determined the result of the last game against ${state.lastGame.opponent.displayName} as ${state.lastGame.resultFromRecord} from the team record, but determined the result of the last game as ${state.lastGame.resultFromScore} from the scrambled score."
+        logDebug(resultWarning)
+        notificationDevices.deviceNotification(resultWarning) 
+    }
+    if (state.lastGame.notifiedOfResult == null || state.lastGame.notifiedOfResult == false) {
+        if (state.lastGame.status == "Won") {
+            handleWinEvent(state.lastGame)
+            state.lastGame.notifiedOfResult = true
+        }
+        else if (state.lastGame.status == "Lost") {
+            handleLossEvent(state.lastGame)
+            state.lastGame.notifiedOfResult = true
+        }
+    }
 }
 
 def updateRecord(onDemand = false) {
@@ -624,10 +749,7 @@ def updateRecord(onDemand = false) {
             state.lastRecord = [wins: storedRecord.wins, losses: storedRecord.losses, overtimeLosses: storedRecord.overtimeLosses, ties: storedRecord.ties, asOf: (new Date()).getTime()]  
         }
         else logDebug("Team Record has not changed. No update to state.lastRecord made.")
-        def lastGameResult = getLastGameResult(onDemand)
-        if (state.lastGame != null) state.lastGame.status = lastGameResult != null ? lastGameResult : state.lastGame.status
-        if (hasRecordChanged && lastGameResult == "Won") handleWinEvent(state.lastGame.opponent.displayName)
-        else if (hasRecordChanged && lastGameResult == "Lost") handleLossEvent(state.lastGame.opponent.displayName)
+        setLastGameResult(hasRecordChanged, onDemand)
         updateDisplayedGame()
     }
 }
@@ -652,7 +774,22 @@ def hasRecordChanged(storedRecord) {
     return hasChanged
 }
 
-def getLastGameResult(suppressRetry = false) {
+
+def getLastGameResultFromScore() { 
+    def result = null
+    if (state.lastGame.homeOrAway == "Home") { 
+        if (state.lastGame.scrambledHomeScore < state.lastGame.scrambledAwayScore) result = "Lost"
+        else if (state.lastGame.scrambledHomeScore > state.lastGame.scrambledAwayScore) result = "Won"
+        else result = null // Tied scrambled score unreliable because of rounding, so fallback to record
+    } else if (state.lastGame.homeOrAway == "Away") { 
+        if (state.lastGame.scrambledHomeScore > state.lastGame.scrambledAwayScore) result = "Lost"
+        else if (state.lastGame.scrambledHomeScore < state.lastGame.scrambledAwayScore) result = "Won"
+        else result = null // Tied scrambled score unreliable because of rounding, so fallback to record
+    }
+    return result
+}
+
+def getLastGameResultFromRecord(suppressRetry = false) {
     def result = null
     def recordNotUpdated = false
     def currentRecord = getRecord(state.team)
@@ -709,17 +846,23 @@ def getLastGameResult(suppressRetry = false) {
     return result
 }
 
-def handleWinEvent(opponent) {
+def handleWinEvent(lastGame) {
+    def opponent = lastGame.opponent.displayName
     pushDeviceButton(3)
     if (isWinEventNotify == true && notificationDevices != null) {          
-        notificationDevices.deviceNotification("Victory! ${state.team.displayName} win over the ${opponent}!") 
+        def scoreText = ""
+        if (getShowScoreSetting() && lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
+        notificationDevices.deviceNotification("Victory! ${state.team.displayName} win over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }
 }
 
-def handleLossEvent(opponent) {
+def handleLossEvent(lastGame) {
+    def opponent = lastGame.opponent.displayName
     pushDeviceButton(4)
     if (isLossEventNotify == true && notificationDevices != null) {          
-        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} lose to the ${opponent}.") 
+        def scoreText = ""
+        if (getShowScoreSetting() && lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
+        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} lose to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }    
 }
 
@@ -761,9 +904,32 @@ def getGameData(game) {
             opponent = homeTeam
             homeOrAway = "Away"
         }
-        else log.error "Team Not Playing in Game"         
+        else log.error "Team Not Playing in Game"      
 
-        gameData = [id: gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, homeOrAway: homeOrAway, status: status, progress: progress, channel: channel]
+        def scrambledHomeScore = null
+        def scrambledAwayScore = null
+        if (league == "NFL") {
+            def score = fetchScore(game.ScoreID)
+            scrambledHomeScore = score.scrambledHomeScore
+            scrambledAwayScore = score.scrambledAwayScore
+        }
+        else if (leage == "MLB") {
+            scrambledHomeScore = game.HomeTeamRuns
+            scrambledAwayScore = game.AwayTeamRuns
+        }
+        else {
+            scrambledHomeScore = game.HomeTeamScore
+            scrambledAwayScore = game.AwayTeamScore
+        }
+
+        def descrambledHomeScore = null
+        def descrambledAwayScore = null
+        if (state.calibrationData && state.calibrationData.scaleFactor && scrambledHomeScore && scrambledAwayScore) {
+            descrambledHomeScore = Math.round(scrambledHomeScore * state.calibrationData.scaleFactor)
+            descrambledAwayScore = Math.round(scrambledAwayScore * state.calibrationData.scaleFactor)
+        }
+
+        gameData = [id: gameID, gameTime: gameTime.getTime(), gameTimeStr: gameTimeStr, homeTeam: homeTeam, awayTeam: awayTeam, opponent: opponent, homeOrAway: homeOrAway, status: status, progress: progress, scrambledHomeScore: scrambledHomeScore, scrambledAwayScore: scrambledAwayScore, descrambledHomeScore: descrambledHomeScore, descrambledAwayScore: descrambledAwayScore, channel: channel]
 
     }
     return gameData
@@ -857,9 +1023,13 @@ def getGameID(game) {
     return id
 }
 
-def update(onInitialize = false) {
+def update(onInitialize = false, setScaleFactor = false) {
     logDebug("Updating GameTime for ${state.team.displayName}")
     updateState(onInitialize)
+    if (setScaleFactor) {
+        setScoreScalingFactor()
+        updateState(onInitialize) // update state again after acquiring scaling factor
+    }
     updateDisplayedGame()
     scheduleUpdate()
 }
@@ -949,7 +1119,7 @@ def getGameToDisplay() {
 
 def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
     if (minsLeft == 0) {
-        notificationDevices.deviceNotification("Gametime! ${myTeam} play the ${opponent}. ${timeStr}.")           
+        notificationDevices.deviceNotification("Gametime! ${myTeam} plays ${opponent}. ${timeStr}.")           
     }
     else {
         def hours = (minsLeft / 60).intValue()
@@ -961,7 +1131,7 @@ def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
         if (mins == 1) minStr = mins + " minute"
         else if (mins > 1) minStr = mins + " minutes"
         def timeLeft = (hourStr == "") ? minStr : hourStr + " " + minStr
-        notificationDevices.deviceNotification("The ${myTeam} play the ${opponent} in ${timeLeft}. Game starts ${timeStr}.")
+        notificationDevices.deviceNotification("${myTeam} plays ${opponent} in ${timeLeft}. Game starts ${timeStr}.")
     }    
 }
 
@@ -1038,6 +1208,10 @@ def updateGameInProgress() {
             logDebug("Updating game in progress. Progress is ${updatedGameData.progress}. Status is ${updatedGameData.status}")
             state.nextGame.progress = updatedGameData.progress
             state.nextGame.status = updatedGameData.status
+            state.nextGame.scrambledAwayScore = updatedGameData.scrambledAwayScore
+            state.nextGame.scrambledHomeScore = updatedGameData.scrambledHomeScore
+            state.nextGame.descrambledAwayScore = updatedGameData.descrambledAwayScore
+            state.nextGame.descrambledHomeScore = updatedGameData.descrambledHomeScore
         }
         def scheduleTile = getScheduleTile()
         updateDevice([game: state.nextGame, switchValue: getSwitchValue(), tile: getGameTile(state.nextGame), scheduleTile: scheduleTile])
@@ -1079,7 +1253,12 @@ def getGameTile(game) {
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center>${game.homeTeam.name}</td></tr>" 
             }
-            if (parent.showTeamRecord && !getHideGameResultSetting()) {
+            if (getShowScoreSetting() && game.descrambledAwayScore && game.descrambledHomeScore) {
+                gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center>${game.descrambledAwayScore}</td>"
+                gameTile += "<td width='10%' align=center></td>"
+                gameTile += "<td width='40%' align=center>${game.descrambledHomeScore}</td></tr>" 
+            }
+            if (parent.showTeamRecord && getShowGameResultSetting()) {
                 def awayTeamRecordSuffix = ""
                 if (league == "NHL") awayTeamRecordSuffix = "-" + game.awayTeam.overtimeLosses
                 else if (league == "NFL") awayTeamRecordSuffix = "-" + game.awayTeam.ties
@@ -1220,7 +1399,7 @@ def fetchScore(id) {
     def data = null
     if (league == "NFL") {
         def boxScore = sendApiRequest("/stats/json/BoxScoreByScoreIDV3/" + id)
-        data = [quarter: boxScore.Score.Quarter, timeRemaining:boxScore.Score.TimeRemaining]
+        data = [quarter: boxScore.Score.Quarter, timeRemaining:boxScore.Score.TimeRemaining, scrambledAwayScore: boxScore.Score.AwayScore, scrambledHomeScore: boxScore.Score.HomeScore]
     }
     return data
 }
