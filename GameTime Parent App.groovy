@@ -48,6 +48,7 @@
  *  v1.6.0  - Determine win-loss from scrambled score; Add option to descramble scoring and display on tile
  *  v1.6.1  - Suppress win-loss notification on app initialization
  *  v1.6.2  - Add option to show game result with color of score
+ *  v1.6.3  - Bug fix
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

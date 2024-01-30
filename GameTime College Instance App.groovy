@@ -1216,7 +1216,7 @@ def getGameTile(game) {
             if (getShowScoreSetting() && game.descrambledAwayScore && game.descrambledHomeScore) {
                 def awayScoreColor = null
                 def homeScoreColor = null
-                if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") {
+                if (gameFinished && getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") {
                     if (game.homeOrAway == "Away") {
                         if (game.descrambledAwayScore > game.descrambledHomeScore) awayScoreColor = "#059936" // green
                         else if (game.descrambledAwayScore < game.descrambledHomeScore) awayScoreColor = "#C33414" // red
