@@ -865,7 +865,7 @@ def handleWinEvent(lastGame) {
     if (isWinEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Victory! ${state.team.displayName} win over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Victory! ${state.team.displayName} wins over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }
 }
 
@@ -875,7 +875,7 @@ def handleLossEvent(lastGame) {
     if (isLossEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} lose to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} loses to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }    
 }
 
@@ -940,7 +940,7 @@ def getGameData(game) {
 
 def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
     if (minsLeft == 0) {
-        notificationDevices.deviceNotification("Gametime! ${myTeam} play the ${opponent}. ${timeStr}.")           
+        notificationDevices.deviceNotification("Gametime! ${myTeam} plays ${opponent}. ${timeStr}.")           
     }
     else {
         def hours = (minsLeft / 60).intValue()
@@ -952,7 +952,7 @@ def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
         if (mins == 1) minStr = mins + " minute"
         else if (mins > 1) minStr = mins + " minutes"
         def timeLeft = (hourStr == "") ? minStr : hourStr + " " + minStr
-        notificationDevices.deviceNotification("The ${myTeam} play the ${opponent} in ${timeLeft}. Game starts ${timeStr}.")
+        notificationDevices.deviceNotification("The ${myTeam} plays ${opponent} in ${timeLeft}. Game starts ${timeStr}.")
     }    
 }
 

@@ -49,6 +49,7 @@
  *  v1.6.1  - Suppress win-loss notification on app initialization
  *  v1.6.2  - Add option to show game result with color of score
  *  v1.6.3  - Bug fix
+ *  v1.6.4  - Bug fix
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
