@@ -1196,14 +1196,17 @@ def getGameTile(game) {
         if (textColor != "#000000") colorStyle = "color:" + textColor
         if (game != null) {
             def detailStr = null
-            def gameFinished = (game.status == "Scheduled" || game.status == "InProgress") ? false : true
+            def gameFinished = (game.status == "Scheduled" || game.status == "InProgress" || game.status == "Canceled") ? false : true
+            logDebug("Game Status for ${game} is ${game.status}")
             if (game.status == "InProgress") detailStr = game.progress
             else if (gameFinished) {
                 if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") detailStr = null // will show game result with color of score instead of text
                 else if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Text on Tile") detailStr = game.status               
                 else if (getShowGameResultSetting()) detailStr = game.status
             }
-            else detailStr = game.gameTimeStr   
+            else if (game.status == "Scheduled") detailStr = game.gameTimeStr   
+            else detailStr = game.status
+
             gameTile = "<div style='overflow:auto;height:90%;font-size:${fontSize}%;${colorStyle}'><table width='100%'>"
             gameTile += "<tr><td width='40%' align=center><img src='${game.awayTeam.logo}' width='100%'></td>"
             gameTile += "<td width='10%' align=center>at</td>"

@@ -50,6 +50,7 @@
  *  v1.6.2  - Add option to show game result with color of score
  *  v1.6.3  - Bug fix
  *  v1.6.4  - Bug fix
+ *  v1.6.5  - Bug fix to handle 'Canceled' status for a game
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
