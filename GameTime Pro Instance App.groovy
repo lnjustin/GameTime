@@ -1081,21 +1081,29 @@ Date getDateToSwitchFromLastToNextGame() {
     if (isToday(lastGameTime) && isToday(nextGameTime)) {
         // switch to next game today if next game is today too (double header)
         if (now.after(nextGameTime)) date = now // if double header is already scheduled to start, switch now
-        else {
-            def switchTime = Math.round(getSecondsBetweenDates(now, nextGameTime) / 120) as Integer // switch halfway between now and the next game time
-            Calendar cal = Calendar.getInstance()
-            cal.setTimeZone(location.timeZone)
-            cal.setTime(lastGameTime)
-            cal.add(Calendar.MINUTE, switchTime)
-            date = cal.time
-        }
+        else date = getHalfwayBetween(nextGameTime, lastGameTime)
     }
     else {
         def numDaysLater = displayCompletedGameDaysSetting()
         Date timeLater = toDateTime(displayCompletedGameTimeSetting())
-        date = getNumDaysLaterAtTime(lastGameTime, numDaysLater, timeLater)        
+        if (nextGameTime.after(timeLater)) {
+            // if next game starts before it would be time to switch to display the next game
+            if (now.after(nextGameTime)) date = now
+            else date = getHalfwayBetween(nextGameTime, lastGameTime)
+        }
+        else date = getNumDaysLaterAtTime(lastGameTime, numDaysLater, timeLater)        
     }
     return date
+}
+
+Date getHalfwayBetween(Date nextGameTime, Date lastGameTime) {
+    def now = new Date()
+    def switchTime = Math.round(getSecondsBetweenDates(now, nextGameTime) / 120) as Integer // switch halfway between now and the next game time
+    Calendar cal = Calendar.getInstance()
+    cal.setTimeZone(location.timeZone)
+    cal.setTime(lastGameTime)
+    cal.add(Calendar.MINUTE, switchTime)
+    return cal.time    
 }
 
 def getGameToDisplay() {

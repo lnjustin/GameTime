@@ -51,6 +51,7 @@
  *  v1.6.3  - Bug fix
  *  v1.6.4  - Bug fix
  *  v1.6.5  - Bug fix to handle 'Canceled' status for a game
+ *  v1.6.6  - Bug fix to handle when next game starts before would have switched to display next game
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
