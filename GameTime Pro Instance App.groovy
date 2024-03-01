@@ -1256,7 +1256,7 @@ def getGameTile(game) {
             else if (gameFinished) {
                 if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") detailStr = null // will show game result with color of score instead of text
                 else if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Text on Tile") detailStr = game.status               
-                else if (getShowGameResultSetting()) detailStr = game.status
+                else detailStr = game.status
             }
             else if (game.status == "Scheduled") detailStr = game.gameTimeStr   
             else detailStr = game.status 
