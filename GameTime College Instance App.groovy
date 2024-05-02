@@ -361,15 +361,14 @@ def setScoreScalingFactor() {
             if (state.gameForCalibration.scrambledHomeScore > 0 && state.gameForCalibration.scrambledAwayScore > 0) {
                 def scaleFactor = actualLastGameHomeScore / state.gameForCalibration.scrambledHomeScore
                 def calculatedAwayScore = Math.round(state.gameForCalibration.scrambledAwayScore * scaleFactor)
+                state.calibrationData.scaleFactor = scaleFactor
+                state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
+                state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
                 if (calculatedAwayScore == actualLastGameAwayScore) {
-                    state.calibrationData.scaleFactor = scaleFactor
-                    state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
-                    state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
                     logDebug("Scoring Calibration Success! Scaling factor is ${scaleFactor}.")
                 }
                 else {
-                    state.calibrationData.scaleFactor = null
-                    logDebug("Scoring Calibration Failed: With a scaling factor of ${scaleFactor}, calculated away score of ${calculatedAwayScore} but actual away score was ${actualLastGameAwayScore}.")
+                    logDebug("Scoring Calibration Potentially Inaccurate: With a scaling factor of ${scaleFactor}, calculated away score of ${calculatedAwayScore} but actual away score was ${actualLastGameAwayScore}.")
                 }
             }
             else logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")

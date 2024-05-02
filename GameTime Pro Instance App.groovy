@@ -350,15 +350,14 @@ def setScoreScalingFactor() {
             if (state.gameForCalibration.scrambledHomeScore > 0 && state.gameForCalibration.scrambledAwayScore > 0) {
                 def scaleFactor = actualLastGameHomeScore / state.gameForCalibration.scrambledHomeScore
                 def calculatedAwayScore = Math.round(state.gameForCalibration.scrambledAwayScore * scaleFactor)
+                state.calibrationData.scaleFactor = scaleFactor
+                state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
+                state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
                 if (calculatedAwayScore == actualLastGameAwayScore) {
-                    state.calibrationData.scaleFactor = scaleFactor
-                    state.calibrationData.descrambledAwayScore = actualLastGameAwayScore
-                    state.calibrationData.descrambledHomeScore = actualLastGameHomeScore
                     logDebug("Scoring Calibration Success! Scaling factor is ${scaleFactor}.")
                 }
                 else {
-                    state.calibrationData.scaleFactor = null
-                    logDebug("Scoring Calibration Failed: With a scaling factor of ${scaleFactor}, calculated away score of ${calculatedAwayScore} but actual away score was ${actualLastGameAwayScore}.")
+                    logDebug("Scoring Calibration Potentially Inaccurate: With a scaling factor of ${scaleFactor}, calculated away score of ${calculatedAwayScore} but actual away score was ${actualLastGameAwayScore}.")
                 }
             }
             else logDebug("Warning: Calibration attempted with a game in which at least one team had a score of 0. No calibration occurred. Retry with a game in which both teams have a non-zero score.")
@@ -916,7 +915,7 @@ def getGameData(game) {
             scrambledHomeScore = score.scrambledHomeScore
             scrambledAwayScore = score.scrambledAwayScore
         }
-        else if (leage == "MLB") {
+        else if (league == "MLB") {
             scrambledHomeScore = game.HomeTeamRuns
             scrambledAwayScore = game.AwayTeamRuns
         }
@@ -1270,7 +1269,7 @@ def getGameTile(game) {
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center>${game.homeTeam.name}</td></tr>" 
             }
-            if (getShowScoreSetting() && game.descrambledAwayScore && game.descrambledHomeScore) {
+            if (getShowScoreSetting() && game.descrambledAwayScore != null && game.descrambledHomeScore != null) {
                 def awayScoreColor = null
                 def homeScoreColor = null
                 if (gameFinished && getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") {
@@ -1283,10 +1282,12 @@ def getGameTile(game) {
                         else if (game.descrambledAwayScore > game.descrambledHomeScore) homeScoreColor = "#059936" // green
                     }
                 }
+                else logDebug("Will show score, but condition for showing it not yet met.Ó")
                 gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center" + (awayScoreColor ? " bgcolor='${awayScoreColor}'" : "") +  ">${game.descrambledAwayScore}</td>"
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center" + (homeScoreColor ? " bgcolor='${homeScoreColor}'" : "") +  ">${game.descrambledHomeScore}</td></tr>" 
             }
+            else logDebug("Not showing score. scoreSetting = ${getShowScoreSetting()}, decrambledAwayScore = ${game.descrambledAwayScore}, descrambledHomeScore = ${game.descrambledHomeScore}")
             if (parent.showTeamRecord && getShowGameResultSetting()) {
                 def awayTeamRecordSuffix = ""
                 if (league == "NHL") awayTeamRecordSuffix = "-" + game.awayTeam.overtimeLosses
