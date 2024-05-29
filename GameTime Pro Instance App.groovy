@@ -926,7 +926,7 @@ def getGameData(game) {
 
         def descrambledHomeScore = null
         def descrambledAwayScore = null
-        if (state.calibrationData && state.calibrationData.scaleFactor && scrambledHomeScore && scrambledAwayScore) {
+        if (state.calibrationData && state.calibrationData.scaleFactor != null && scrambledHomeScore != null && scrambledAwayScore != null) {
             descrambledHomeScore = Math.round(scrambledHomeScore * state.calibrationData.scaleFactor)
             descrambledAwayScore = Math.round(scrambledAwayScore * state.calibrationData.scaleFactor)
         }
@@ -1282,7 +1282,7 @@ def getGameTile(game) {
                         else if (game.descrambledAwayScore > game.descrambledHomeScore) homeScoreColor = "#059936" // green
                     }
                 }
-                else logDebug("Will show score, but condition for showing it not yet met.Ó")
+                else logDebug("Will show score, but condition for showing it not yet met.")
                 gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center" + (awayScoreColor ? " bgcolor='${awayScoreColor}'" : "") +  ">${game.descrambledAwayScore}</td>"
                 gameTile += "<td width='10%' align=center></td>"
                 gameTile += "<td width='40%' align=center" + (homeScoreColor ? " bgcolor='${homeScoreColor}'" : "") +  ">${game.descrambledHomeScore}</td></tr>" 

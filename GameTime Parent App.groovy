@@ -54,6 +54,7 @@
  *  v1.6.6  - Bug fix to handle when next game starts before would have switched to display next game
   * v1.6.7  - Bug fix for status on tile
  * v1.6.8   - Bug fix for scores
+  * v1.6.9   - Bug fix for scores
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

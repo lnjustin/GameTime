@@ -926,7 +926,7 @@ def getGameData(game) {
 
         def descrambledHomeScore = null
         def descrambledAwayScore = null
-        if (state.calibrationData && state.calibrationData.scaleFactor && scrambledHomeScore && scrambledAwayScore) {
+        if (state.calibrationData && state.calibrationData.scaleFactor != null && scrambledHomeScore != null && scrambledAwayScore != null) {
             descrambledHomeScore = Math.round(scrambledHomeScore * state.calibrationData.scaleFactor)
             descrambledAwayScore = Math.round(scrambledAwayScore * state.calibrationData.scaleFactor)
         }
