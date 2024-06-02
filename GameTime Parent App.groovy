@@ -55,6 +55,7 @@
   * v1.6.7  - Bug fix for status on tile
  * v1.6.8   - Bug fix for scores
   * v1.6.9   - Bug fix for scores
+* v1.6.10 - Bug fix
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

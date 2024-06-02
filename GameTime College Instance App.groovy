@@ -1229,12 +1229,12 @@ def getGameTile(game) {
                 def homeScoreColor = null
                 if (gameFinished && getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") {
                     if (game.homeOrAway == "Away") {
-                        if (game.descrambledAwayScore > game.descrambledHomeScore) awayScoreColor = "#059936" // green
-                        else if (game.descrambledAwayScore < game.descrambledHomeScore) awayScoreColor = "#C33414" // red
+                        if (game.status == "Won" || (game.descrambledAwayScore > game.descrambledHomeScore)) awayScoreColor = "#059936" // green
+                        else if (game.status == "Lost" || (game.descrambledAwayScore < game.descrambledHomeScore)) awayScoreColor = "#C33414" // red
                     }
                     else if (game.homeOrAway == "Home") {
-                        if (game.descrambledAwayScore > game.descrambledHomeScore) homeScoreColor = "#C33414" // red
-                        else if (game.descrambledAwayScore < game.descrambledHomeScore) homeScoreColor = "#059936" // green
+                        if (game.status == "Lost" || (game.descrambledAwayScore > game.descrambledHomeScore)) homeScoreColor = "#C33414" // red
+                        else if (game.status == "Won" || (game.descrambledAwayScore < game.descrambledHomeScore)) homeScoreColor = "#059936" // green
                     }
                 }
                 gameTile += "<tr style='padding-bottom: 0em'><td width='40%' align=center" + (awayScoreColor ? " bgcolor='${awayScoreColor}'" : "") +  ">${game.descrambledAwayScore}</td>"
