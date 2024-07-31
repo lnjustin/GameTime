@@ -67,7 +67,7 @@ def mainPage() {
        
             def key = getAPIKey()
             section {
-              //  header()                
+                header()                
                 paragraph getInterface("header", " GameTime College Instance")
                 paragraph getInterface("note", "After selecting the league and your team, click DONE. This will create a device for the selected team, listed under the GameTime parent device.")
                 input(name:"league", type: "enum", title: "College Sports League", options: leagues, required:true, submitOnChange:true)
@@ -176,6 +176,22 @@ def mainPage() {
     }
 }
 
+String logo(String width='75') {
+    return '<img width="' + width + 'px" style="display: block;margin-left: auto;margin-right: auto;margin-top:0px;" border="0" src="' + getLogoPath() + '">'
+}
+
+def header() {
+    paragraph logo('90')
+}
+
+def getLogoPath() {
+    return "https://github.com/lnjustin/App-Images/blob/master/GameTime/GameTime.png?raw=true"
+}
+
+def footer() {
+    paragraph getInterface("line", "") + '<div style="display: block;margin-left: auto;margin-right: auto;text-align:center"><img width="25px" border="0" src="' + getLogoPath() + '"> &copy; 2024 lnjustin.<br>'
+}
+
 def getLeagueAPIKey(forLeague) {
     def key = null
     if (league == forLeague) key = apiKey
@@ -278,10 +294,6 @@ def getTeamKey() {
     return state.team?.key  
 }
 
-def footer() {
-    paragraph getInterface("line", "") + '<div style="display: block;margin-left: auto;margin-right: auto;text-align:center">&copy; 2020 Justin Leonard.<br>'
-}
-    
 def installed() {
 	initialize()
 }

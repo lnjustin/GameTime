@@ -56,6 +56,7 @@
  * v1.6.8   - Bug fix for scores
   * v1.6.9   - Bug fix for scores
 * v1.6.10 - Bug fix
+* v1.6.11 - Added logo
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
@@ -83,7 +84,10 @@ preferences {
 def mainPage() {
     dynamicPage(name: "mainPage") {
     	    installCheck()
-		    if(state.appInstalled == 'COMPLETE'){       
+		    if(state.appInstalled == 'COMPLETE'){   
+                section() {
+                    header()
+                }    
                 section(getInterface("header", " College Sports")) {
                     app(name: "anyOpenApp", appName: "GameTime College Instance", namespace: "lnjustin", title: "<b>Add a new GameTime instance for college sports</b>", multiple: true)
                 }
@@ -126,9 +130,26 @@ def mainPage() {
     }
 }
 
+String logo(String width='75') {
+    return '<img width="' + width + 'px" style="display: block;margin-left: auto;margin-right: auto;margin-top:0px;" border="0" src="' + getLogoPath() + '">'
+}
+
+def header() {
+    paragraph logo('90')
+}
+
+def getLogoPath() {
+    return "https://github.com/lnjustin/App-Images/blob/master/GameTime/GameTime.png?raw=true"
+}
+
+def footer() {
+    paragraph getInterface("line", "") + '<div style="display: block;margin-left: auto;margin-right: auto;text-align:center"><img width="25px" border="0" src="' + getLogoPath() + '"> &copy; 2024 lnjustin.<br>'
+}
+
 def removePage() {
 	dynamicPage(name: "removePage", title: "Remove GameTime", install: false, uninstall: true) {
 		section ("WARNING!\n\nRemoving GameTime will remove all Team Devices\n") {
+            header() 
 		}
 	}
 }
@@ -201,12 +222,7 @@ def getClearDeviceRuleHoursSetting() {
 
 def getclearDeviceRuleSetting() {    
     return clearDeviceRule != null ? clearDeviceRule : "never"
-}
-
-def footer() {
-    paragraph getInterface("line", "") + '<div style="display: block;margin-left: auto;margin-right: auto;text-align:center">&copy; 2020 Justin Leonard.<br>'
-}
-      
+}  
     
 def installed() {
 	initialize()
