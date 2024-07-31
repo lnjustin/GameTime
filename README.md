@@ -1,3 +1,6 @@
+
+![GameTimeHeader](https://github.com/user-attachments/assets/9119b9bb-6a22-4f9f-ac63-a00cc65bba35)
+
 # GameTime
 
 - Follow and automate based on the schedules of your favorite professional and college sports teams.
