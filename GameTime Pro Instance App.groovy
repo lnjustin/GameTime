@@ -1089,21 +1089,22 @@ Date getDateToSwitchFromLastToNextGame() {
     if (state.nextGame != null) nextGameTime = new Date(state.nextGame.gameTime)
     def now = new Date()
     Date date = null
-
-    if (isToday(lastGameTime) && isToday(nextGameTime)) {
-        // switch to next game today if next game is today too (double header)
-        if (now.after(nextGameTime)) date = now // if double header is already scheduled to start, switch now
-        else date = getHalfwayBetween(nextGameTime, lastGameTime)
-    }
-    else {
-        def numDaysLater = displayCompletedGameDaysSetting()
-        Date timeLater = toDateTime(displayCompletedGameTimeSetting())
-        if (nextGameTime.after(timeLater)) {
-            // if next game starts before it would be time to switch to display the next game
-            if (now.after(nextGameTime)) date = now
+    if (nextGameTime != null) {
+        if (isToday(lastGameTime) && isToday(nextGameTime)) {
+            // switch to next game today if next game is today too (double header)
+            if (now.after(nextGameTime)) date = now // if double header is already scheduled to start, switch now
             else date = getHalfwayBetween(nextGameTime, lastGameTime)
         }
-        else date = getNumDaysLaterAtTime(lastGameTime, numDaysLater, timeLater)        
+        else {
+            def numDaysLater = displayCompletedGameDaysSetting()
+            Date timeLater = toDateTime(displayCompletedGameTimeSetting())
+            if (nextGameTime.after(timeLater)) {
+                // if next game starts before it would be time to switch to display the next game
+                if (now.after(nextGameTime)) date = now
+                else date = getHalfwayBetween(nextGameTime, lastGameTime)
+            }
+            else date = getNumDaysLaterAtTime(lastGameTime, numDaysLater, timeLater)        
+        }
     }
     return date
 }

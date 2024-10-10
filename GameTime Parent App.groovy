@@ -57,6 +57,7 @@
   * v1.6.9   - Bug fix for scores
 * v1.6.10 - Bug fix
 * v1.6.11 - Added logo
+* v1.6.12 - Bug fix
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
