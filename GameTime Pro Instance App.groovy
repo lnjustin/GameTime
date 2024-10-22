@@ -656,7 +656,7 @@ def updateState(onInitialize = false) {
     for (game in schedule) {
         def gameTime = getGameTime(game)
         def status = game.Status 
-        if (gameTime != null && (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed")) {
+        if (gameTime != null && status != "NotNecessary" && (gameTime.after(now) || gameTime.equals(now)  || status == "Scheduled" || status == "InProgress"  || status == "Delayed")) {
             // handle upcoming game
             // TO DO: Consider a game with a status of "Canceled" as the next game or not?
             if (nextGame == null) nextGame = game
@@ -674,7 +674,7 @@ def updateState(onInitialize = false) {
             }
             if (gameTime.after(now) || status == "Scheduled") upcomingSchedule.add(game)
         }
-        else if (gameTime != null) {
+        else if (gameTime != null && status != "NotNecessary") {
             // handle finished game
             if (lastGame == null) lastGame = game
             else {
