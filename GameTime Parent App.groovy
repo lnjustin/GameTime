@@ -59,6 +59,7 @@
 * v1.6.11 - Added logo
 * v1.6.12 - Bug fix
 * v1.6.13 - Exclude playoff games that aren't necessary (e.g., game 7 when series already won)
+* v1.6.14 - Bug fix in tile
  */
 import java.text.SimpleDateFormat
 import groovy.transform.Field

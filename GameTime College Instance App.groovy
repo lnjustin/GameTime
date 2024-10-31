@@ -64,7 +64,7 @@ def instantiateToken() {
 
 def mainPage() {
     dynamicPage(name: "mainPage") {
-       
+
             def key = getAPIKey()
             section {
                 header()                
@@ -1220,8 +1220,10 @@ def getGameTile(game) {
             logDebug("Game Status for ${game} is ${game.status}")
             if (game.status == "InProgress") detailStr = game.progress
             else if (gameFinished) {
-                if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Color of Score") detailStr = null // will show game result with color of score instead of text
-                else if (getShowScoreSetting() && getShowGameResultSetting() && showGameResultMethod == "Text on Tile") detailStr = game.status               
+                if (getShowScoreSetting() && getShowGameResultSetting()) {
+                    if (game.descrambledAwayScore != null && game.descrambledHomeScore != null && showGameResultMethod == "Color of Score") detailStr = null // will show game result with color of score instead of text
+                    else if (game.descrambledAwayScore == null || game.descrambledHomeScore == null || showGameResultMethod == "Text on Tile") detailStr = game.status               
+                }
                 else detailStr = game.status
             }
             else if (game.status == "Scheduled") detailStr = game.gameTimeStr   
