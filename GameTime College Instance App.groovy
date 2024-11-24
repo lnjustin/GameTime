@@ -490,7 +490,7 @@ def isYesterday(Date date) {
 }
 
 def update(onInitialize = false, setScaleFactor = false) {
-    logDebug("Updating GameTime for ${state.team.displayName}")
+    logDebug("Updating GameTime for ${state.team?.displayName}")
     if (!state.teams) setTeams()
     updateState(onInitialize)
     if (setScaleFactor) {
@@ -502,7 +502,7 @@ def update(onInitialize = false, setScaleFactor = false) {
 }
 
 def getScheduleTile() {  
-    logDebug("Getting schedule tile for ${state.team.displayName}")
+    logDebug("Getting schedule tile for ${state.team?.displayName}")
     if (!state.refreshNum) state.refreshNum = 0
     state.refreshNum++
     def scheduleUrl = getScheduleEndpoint() + '&version=' + state.refreshNum   
@@ -876,7 +876,7 @@ def handleWinEvent(lastGame) {
     if (isWinEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Victory! ${state.team.displayName} wins over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Victory! ${state.team?.displayName} wins over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }
 }
 
@@ -886,7 +886,7 @@ def handleLossEvent(lastGame) {
     if (isLossEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} loses to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Defeat. ${state.team?.displayName} loses to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }    
 }
 
@@ -970,14 +970,14 @@ def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
 def handleFirstPreGameEvent(data) {
     pushDeviceButton(1)
     if (isFirstEventNotify == true && notificationDevices != null) {          
-        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getFirstEventAdvanceSetting())
+        sendPreGameNotification(state.team?.displayName, data.opponent, data.gameTimeStr, getFirstEventAdvanceSetting())
     }
 }
 
 def handleSecondPreGameEvent(data) {
     pushDeviceButton(2)
     if (isSecondEventNotify == true && notificationDevices != null) {
-        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getSecondEventAdvanceSetting())
+        sendPreGameNotification(state.team?.displayName, data.opponent, data.gameTimeStr, getSecondEventAdvanceSetting())
     }
 }
 

@@ -581,7 +581,7 @@ def getScheduleData(upcomingSchedule) {
 
 
 def getScheduleTile() {  
-    logDebug("Getting schedule tile for ${state.team.displayName}")
+    logDebug("Getting schedule tile for ${state.team?.displayName}")
     if (!state.refreshNum) state.refreshNum = 0
     state.refreshNum++
     def scheduleUrl = getScheduleEndpoint() + '&version=' + state.refreshNum   
@@ -809,7 +809,7 @@ def getLastGameResultFromRecord(suppressRetry = false) {
     def recordNotUpdated = false
     def currentRecord = getRecord(state.team)
     if (state.lastRecord == null) {
-        def warning = "Unable to determine result of last game for ${state.team.displayName}. Last team record not stored."
+        def warning = "Unable to determine result of last game for ${state.team?.displayName}. Last team record not stored."
         if (suppressRetry == false) {
             runIn(getUpdateInterval(), updateRecord)
             warning += " Will keep checking."
@@ -844,7 +844,7 @@ def getLastGameResultFromRecord(suppressRetry = false) {
         else if (currentRecord.wins == state.lastRecord.wins && currentRecord.losses == state.lastRecord.losses) recordNotUpdated = true
     }
     if (result == null) {
-        def warning = "Warning: Unable to Determine Result of Last Game for ${state.team.displayName}."
+        def warning = "Warning: Unable to Determine Result of Last Game for ${state.team?.displayName}."
         if (recordNotUpdated == true) {
             warning += " Record has not been updated yet."
             if (suppressRetry == false) {
@@ -867,7 +867,7 @@ def handleWinEvent(lastGame) {
     if (isWinEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (getShowScoreSetting() && lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Victory! ${state.team.displayName} win over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Victory! ${state.team?.displayName} win over ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }
 }
 
@@ -877,7 +877,7 @@ def handleLossEvent(lastGame) {
     if (isLossEventNotify == true && notificationDevices != null) {          
         def scoreText = ""
         if (getShowScoreSetting() && lastGame.descrambledAwayScore && lastGame.descrambledHomeScore) scoreText = lastGame.descrambledHomeScore + " - " + lastGame.descrambledAwayScore
-        notificationDevices.deviceNotification("Defeat. ${state.team.displayName} lose to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
+        notificationDevices.deviceNotification("Defeat. ${state.team?.displayName} lose to ${opponent}${scoreText ? ' ' + scoreText : ''}!") 
     }    
 }
 
@@ -1039,7 +1039,7 @@ def getGameID(game) {
 }
 
 def update(onInitialize = false, setScaleFactor = false) {
-    logDebug("Updating GameTime for ${state.team.displayName}")
+    logDebug("Updating GameTime for ${state.team?.displayName}")
     updateState(onInitialize)
     if (setScaleFactor) {
         setScoreScalingFactor()
@@ -1162,14 +1162,14 @@ def sendPreGameNotification(myTeam, opponent, timeStr, minsLeft) {
 def handleFirstPreGameEvent(data) {
     pushDeviceButton(1)
     if (isFirstEventNotify == true && notificationDevices != null) {          
-        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getFirstEventAdvanceSetting())
+        sendPreGameNotification(state.team?.displayName, data.opponent, data.gameTimeStr, getFirstEventAdvanceSetting())
     }
 }
 
 def handleSecondPreGameEvent(data) {
     pushDeviceButton(2)
     if (isSecondEventNotify == true && notificationDevices != null) {
-        sendPreGameNotification(state.team.displayName, data.opponent, data.gameTimeStr, getSecondEventAdvanceSetting())
+        sendPreGameNotification(state.team?.displayName, data.opponent, data.gameTimeStr, getSecondEventAdvanceSetting())
     }
 }
 
@@ -1252,7 +1252,7 @@ def getSwitchValue() {
 }
 
 def getGameTile(game) {  
-    logDebug("Getting game tile for ${state.team.displayName}")
+    logDebug("Getting game tile for ${state.team?.displayName}")
     def gameTile = "<div style='overflow:auto;height:90%'></div>"
     def clearTileRuleSetting = getclearTileRuleSetting()
     def hourThreshold = getClearTileRuleHoursSetting()
